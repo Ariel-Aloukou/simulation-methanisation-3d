@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { Sky, Html, OrbitControls, Environment } from "@react-three/drei";
@@ -29,6 +29,10 @@ const STAGES = [
   { id: "tri", label: "02 · Réception / Tri", title: "Réception et tri", text: "Les éléments indésirables (pierres, sable, produits chimiques) sont retirés avant d'entrer dans le processus.", color: "#B88955", position: [-12, 0, 0] },
   { id: "pretraitement", label: "03 · Prétraitement", title: "Prétraitement", text: "Le substrat est broyé, mélangé et homogénéisé pour faciliter la digestion.", color: "#C99A61", position: [-4, 0, 0] },
   { id: "methaniseur", label: "04 · Méthaniseur", title: "Digestion anaérobie", text: "Cœur du système : les micro-organismes décomposent la matière organique en absence d'oxygène.", color: "#68B58C", position: [4, 0, 0] },
+  { id: "hydrolyse", label: "04a · Hydrolyse", title: "Hydrolyse", text: "Décomposition des glucides, protéines et lipides en molécules simples.", color: "#C99A61", position: [4, 0, 0] },
+  { id: "acidogenese", label: "04b · Acidogenèse", title: "Acidogenèse", text: "Transformation des molécules simples en acides organiques, alcools, CO₂ et H₂.", color: "#D88961", position: [4, 0, 0] },
+  { id: "acetogenese", label: "04c · Acétogenèse", title: "Acétogenèse", text: "Conversion des acides et alcools en acétate, H₂ et CO₂.", color: "#B7C66D", position: [4, 0, 0] },
+  { id: "methanogenese", label: "04d · Méthanogenèse", title: "Méthanogenèse", text: "Production de CH₄ (biogaz) à partir d'acétate, H₂ et CO₂.", color: "#D8A93E", position: [4, 0, 0] },
   { id: "traitement_biogaz", label: "05 · Traitement du biogaz", title: "Épuration et stockage", text: "Le biogaz est épuré (H₂S, CO₂, humidité) puis stocké sous un dôme EPDM.", color: "#D8A93E", position: [12, 0, 0] },
   { id: "cogeneration", label: "06 · Cogénération", title: "Production d'énergie", text: "Le biogaz alimente un moteur de cogénération (35% électricité, 65% chaleur).", color: "#DE7248", position: [20, 0, 0] },
   { id: "separation_phases", label: "07 · Séparation de phases", title: "Traitement du digestat", text: "Le digestat est séparé en phase solide et liquide pour épandage agronomique.", color: "#58C993", position: [28, 0, 0] },
@@ -285,7 +289,7 @@ function Worker({ position = [0, 0, 0] }) {
           <boxGeometry args={[0.1, 0.4, 0.1]} />
           <meshStandardMaterial color="#1E88E5" />
         </mesh>
-        <mesh position={[-0.3, 0, 0]} castShadow>
+                <mesh position={[-0.3, 0, 0]} castShadow>
           <boxGeometry args={[0.1, 0.4, 0.1]} />
           <meshStandardMaterial color="#1E88E5" />
         </mesh>
@@ -327,7 +331,8 @@ function Spotlight({ position = [0, 0, 0], color = "#FFFFFF", intensity = 1 }) {
 // ============================================
 
 // --- 1. Tas de déchets (Collecte) ---
-function WastePile() {
+// --- 1. Tas de déchets (Collecte) ---
+function WastePile({ onClick }) {  // <-- Ajout de la prop onClick
   const items = useMemo(
     () =>
       Array.from({ length: 30 }, (_, i) => ({
@@ -339,7 +344,7 @@ function WastePile() {
   );
 
   return (
-    <group position={[-20, 0, 0]}>
+    <group position={[-20, 0, 0]} onClick={onClick}>  {/* <-- onClick sur le group */}
       <group position={[-1, 0, 0]}>
         {items.map((d, i) => (
           <mesh key={i} position={d.p} rotation={d.r} scale={d.s} castShadow>
@@ -363,11 +368,11 @@ function WastePile() {
     </group>
   );
 }
-
 // --- 2. Station de tri ---
-function SortingStation() {
+// --- 2. Station de tri ---
+function SortingStation({ onClick }) {  // <-- Ajout de la prop onClick
   return (
-    <group position={[-12, 0, 0]}>
+    <group position={[-12, 0, 0]} onClick={onClick}>  {/* <-- onClick sur le group */}
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[4, 3, 3]} />
         <meshStandardMaterial color="#8B4513" />
@@ -408,14 +413,15 @@ function SortingStation() {
 }
 
 // --- 3. Broyeur / Mélangeur ---
-function Mixer() {
+// --- 3. Broyeur / Mélangeur ---
+function Mixer({ onClick }) {  // <-- Ajout de la prop onClick
   const ref = useRef();
   useFrame((_, dt) => {
     if (ref.current) ref.current.rotation.y += dt * 1.2;
   });
 
   return (
-    <group position={[-4, 0, 0]}>
+    <group position={[-4, 0, 0]} onClick={onClick}>  {/* <-- onClick sur le group */}
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2, 2, 3, 48]} />
         <meshStandardMaterial color="#46555A" metalness={0.8} roughness={0.3} />
@@ -456,7 +462,6 @@ function Mixer() {
     </group>
   );
 }
-
 // --- 4. Méthaniseur (avec dôme EPDM et agitateurs) ---
 function Digester({ onClick }) {
   const domeRef = useRef();
@@ -531,7 +536,6 @@ function Digester({ onClick }) {
     </group>
   );
 }
-
 // --- Vue en coupe du méthaniseur ---
 function DigesterCutView({ stage }) {
   const cfg = {
@@ -631,11 +635,10 @@ function GasCloud() {
     </group>
   );
 }
-
 // --- 5. Traitement du biogaz ---
-function GasTreatment() {
+function GasTreatment({ onClick }) {
   return (
-    <group position={[12, 0, 0]}>
+    <group position={[12, 0, 0]} onClick={onClick}>
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[3, 3, 2]} />
         <meshStandardMaterial color="#34464C" metalness={0.7} roughness={0.4} />
@@ -655,7 +658,7 @@ function GasTreatment() {
       <Label position={[0, 4, 0]} color="#D8A93E">
         TRAITEMENT DU BIOGAZ
       </Label>
-      <Label position={[0, 3.5, 0]} color="#D8A93E" style={{ fontSize: "10px" }}>
+            <Label position={[0, 3.5, 0]} color="#D8A93E" style={{ fontSize: "10px" }}>
         (Épuration H₂S/CO₂ + Stockage)
       </Label>
       <Worker position={[1, 0, -1]} />
@@ -664,9 +667,9 @@ function GasTreatment() {
 }
 
 // --- 6. Cogénération ---
-function Cogeneration() {
+function Cogeneration({ onClick }) {
   return (
-    <group position={[20, 0, 0]}>
+    <group position={[20, 0, 0]} onClick={onClick}>
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[4, 2.5, 3]} />
         <meshStandardMaterial color="#2C3E44" metalness={0.8} roughness={0.3} />
@@ -704,9 +707,9 @@ function Cogeneration() {
 }
 
 // --- 7. Séparation de phases ---
-function PhaseSeparation() {
+function PhaseSeparation({ onClick }) {
   return (
-    <group position={[28, 0, 0]}>
+    <group position={[28, 0, 0]} onClick={onClick}>
       <mesh position={[0, 0.1, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[4, 4]} />
         <meshStandardMaterial color="#5A6A72" roughness={0.9} metalness={0.1} />
@@ -735,7 +738,7 @@ function PhaseSeparation() {
 }
 
 // --- 8. Torchère de sécurité ---
-function Torchere() {
+function Torchere({ onClick }) {
   const flameRef = useRef();
   useFrame(({ clock }) => {
     if (flameRef.current) {
@@ -746,7 +749,7 @@ function Torchere() {
   });
 
   return (
-    <group position={[36, 0, 0]}>
+    <group position={[36, 0, 0]} onClick={onClick}>
       <Fence position={[0, 0, -3]} length={8} />
       <mesh position={[0, 0, 0]} castShadow>
         <cylinderGeometry args={[0.8, 0.8, 8, 16]} />
@@ -775,175 +778,175 @@ function Torchere() {
     </group>
   );
 }
-
 // ============================================
-// SCÈNE PRINCIPALE
+// SCÈNE PRINCIPALE (avec fixes des 3 bugs)
 // ============================================
-function Scene({
-  currentStage,
-  setCurrentStage,
-  isTourActive,
-  tourWaypoints,
-  setTourProgress,
-  setCurrentWaypoint
-}) {
+function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, setTourProgress, setCurrentWaypoint, tourElapsedTime }) {
   const { camera } = useThree();
   const controlsRef = useRef();
   const targetPosition = useRef(new THREE.Vector3());
   const targetLookAt = useRef(new THREE.Vector3());
   const isMoving = useRef(false);
-  const tourStartTime = useRef(0);
   const waypointDuration = 5;
+  const cameraSpeed = 0.1;
 
-  useFrame(() => {
-    if (isMoving.current && controlsRef.current && !isTourActive) {
-      const controls = controlsRef.current;
-      const currentPos = new THREE.Vector3();
-      const currentLook = new THREE.Vector3();
-      camera.getWorldPosition(currentPos);
-      controls.getTarget(currentLook);
-
-      currentPos.lerp(targetPosition.current, 0.1);
-      currentLook.lerp(targetLookAt.current, 0.1);
-
-      camera.position.copy(currentPos);
-      controls.target.copy(currentLook);
-      controls.update();
-
-      if (currentPos.distanceTo(targetPosition.current) < 0.1) {
-        isMoving.current = false;
-      }
+  // useEffect pour observer currentStage
+  useEffect(() => {
+    if (!isTourActive) {
+      const stage = STAGES.find(s => s.id === currentStage);
+      if (stage) moveToPost(stage.position);
     }
+  }, [currentStage, isTourActive]);
 
-    if (isTourActive && controlsRef.current) {
-      const now = Date.now() / 1000;
-      if (tourStartTime.current === 0) {
-        tourStartTime.current = now;
-      }
-
-      const elapsed = now - tourStartTime.current;
-      const totalDuration = tourWaypoints.length * waypointDuration;
-      const progress = Math.min(elapsed / totalDuration, 1);
-      setTourProgress(progress);
-
-      const currentWaypointIndex = Math.min(
-        Math.floor(elapsed / waypointDuration),
-        tourWaypoints.length - 1
-      );
-      setCurrentWaypoint(currentWaypointIndex);
-
-      const startWaypoint = tourWaypoints[currentWaypointIndex];
-      const endWaypoint = tourWaypoints[Math.min(currentWaypointIndex + 1, tourWaypoints.length - 1)];
-
-      const localProgress = (elapsed % waypointDuration) / waypointDuration;
-      const currentPos = new THREE.Vector3().lerpVectors(
-        new THREE.Vector3(...startWaypoint.cameraPos),
-        new THREE.Vector3(...endWaypoint.cameraPos),
-        localProgress
-      );
-      const currentLook = new THREE.Vector3().lerpVectors(
-        new THREE.Vector3(...startWaypoint.target),
-        new THREE.Vector3(...endWaypoint.target),
-        localProgress
-      );
-
-      camera.position.copy(currentPos);
-      controlsRef.current.target.copy(currentLook);
-      controlsRef.current.update();
-
-      if (startWaypoint.stage) {
-        setCurrentStage(startWaypoint.stage);
-      }
-    }
-  });
+  const handleStageClick = (stageId) => {
+    if (!isTourActive) setCurrentStage(stageId);
+  };
 
   const moveToPost = (position) => {
     if (controlsRef.current) {
-      targetPosition.current.set(position.x, position.y + 3, position.z + 8);
-      targetLookAt.current.set(position.x, position.y + 1, position.z);
+      const [x, y, z] = position;
+      targetPosition.current.set(x, y + 3, z + 8);
+      targetLookAt.current.set(x, y + 1, z);
       isMoving.current = true;
     }
   };
 
-  const handleStageClick = (stageId) => {
-    if (!isTourActive) {
-      setCurrentStage(stageId);
-      const stage = STAGES.find(s => s.id === stageId);
-      if (stage) moveToPost(stage.position);
+  useFrame((_, delta) => {
+  if (isMoving.current && controlsRef.current?.target && !isTourActive) {
+    const currentPos = new THREE.Vector3();
+    const currentLook = new THREE.Vector3();
+    camera.getWorldPosition(currentPos);
+    currentLook.copy(controlsRef.current.target);  // ✅ Safe avec ?.
+
+    const lerpFactor = 1 - Math.exp(-cameraSpeed * delta * 60);
+    currentPos.lerp(targetPosition.current, lerpFactor);
+    currentLook.lerp(targetLookAt.current, lerpFactor);
+
+    camera.position.copy(currentPos);
+    controlsRef.current.target.copy(currentLook);
+    controlsRef.current.update();
+
+    if (currentPos.distanceTo(targetPosition.current) < 0.1) {
+      isMoving.current = false;
     }
-  };
+  }
+
+  // Mode visite guidée
+  if (isTourActive && controlsRef.current?.target) {
+    tourElapsedTime.current += delta;
+    const totalDuration = tourWaypoints.length * waypointDuration;
+    const progress = Math.min(tourElapsedTime.current / totalDuration, 1);
+    setTourProgress(progress);
+
+    const currentWaypointIndex = Math.min(
+      Math.floor(tourElapsedTime.current / waypointDuration),
+      tourWaypoints.length - 1
+    );
+    setCurrentWaypoint(currentWaypointIndex);
+
+    const startWaypoint = tourWaypoints[currentWaypointIndex];
+    const endWaypoint = tourWaypoints[Math.min(currentWaypointIndex + 1, tourWaypoints.length - 1)];
+
+    const localProgress = (tourElapsedTime.current % waypointDuration) / waypointDuration;
+    const currentPos = new THREE.Vector3().lerpVectors(
+      new THREE.Vector3(...startWaypoint.cameraPos),
+      new THREE.Vector3(...endWaypoint.cameraPos),
+      localProgress
+    );
+    const currentLook = new THREE.Vector3().lerpVectors(
+      new THREE.Vector3(...startWaypoint.target),
+      new THREE.Vector3(...endWaypoint.target),
+      localProgress
+    );
+
+    camera.position.copy(currentPos);
+    controlsRef.current.target.copy(currentLook);
+    controlsRef.current.update();
+
+    if (startWaypoint.stage) {
+      setCurrentStage(startWaypoint.stage);
+    }
+  }
+});
 
   return (
-    <>
-      <Sky
-        distance={450000}
-        sunPosition={[10, 20, 10]}
-        inclination={0}
-        azimuth={0.25}
-        rayleigh={0.1}
-        turbidity={0.2}
-        mieCoefficient={0.005}
-        mieDirectionalG={0.8}
-      />
-      <ambientLight intensity={0.6} />
-      <directionalLight
-        position={[10, 20, 10]}
-        intensity={1.5}
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-near={0.5}
-        shadow-camera-far={100}
-        shadow-camera-left={-50}
-        shadow-camera-right={50}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
-      />
-      <pointLight position={[0, 10, 0]} intensity={0.5} color="#65C99A" />
-      <ConcreteGround />
-      <Grass />
-      <Tree position={[-25, 0, -10]} />
-      <Tree position={[-25, 0, -20]} />
-      <Tree position={[-25, 0, -30]} />
-      <Tree position={[40, 0, -10]} />
-      <Tree position={[40, 0, -20]} />
-      <Tree position={[40, 0, -30]} />
-      <WastePile />
-      <SortingStation />
-      <Mixer />
-      {currentStage === "hydrolyse" || currentStage === "acidogenese" || currentStage === "acetogenese" || currentStage === "methanogenese" ? (
-        <DigesterCutView stage={currentStage} />
-      ) : (
-        <Digester onClick={() => !isTourActive && handleStageClick("methaniseur")} />
-      )}
-      <GasTreatment />
-      <Cogeneration />
-      <PhaseSeparation />
-      <Torchere />
-      <Fence position={[-20, 0, 5]} length={10} />
-      <Fence position={[36, 0, 5]} length={10} />
-      <Pipe from={[-17, 0.75, 0]} to={[-14, 1.5, 0]} color="#B88955" pulse />
-      <Pipe from={[-10, 1.5, 0]} to={[-6, 2.5, 0]} color="#C99A61" pulse />
-      <Pipe from={[-2, 0.5, 0]} to={[2, 2.5, 0]} color="#68B58C" pulse />
-      <Pipe from={[6, 4.5, 0]} to={[10, 2.5, 0]} color="#D8A93E" pulse />
-      <Pipe from={[14, 2.5, 0]} to={[18, 2.5, 0]} color="#D8A93E" pulse />
-      <Pipe from={[22, 1.5, 0]} to={[26, 1.5, 0]} color="#68B58C" pulse />
-      <OrbitControls
-        ref={controlsRef}
-        rotateSpeed={1.5}
-        zoomSpeed={1.2}
-        panSpeed={0.8}
-        minDistance={5}
-        maxDistance={100}
-        enablePan={!isTourActive}
-        enableRotate={!isTourActive}
-        enableDamping
-        dampingFactor={0.05}
-      />
-    </>
-  );
-}
+  <>
+    {/* Éclairage */}
+    <ambientLight intensity={0.6} />
+    <directionalLight
+      position={[10, 20, 10]}
+      intensity={1.5}
+      castShadow
+      shadowMapSizeWidth={2048}
+      shadowMapSizeHeight={2048}
+      shadowCameraNear={0.5}
+      shadowCameraFar={100}
+      shadowCameraLeft={-50}
+      shadowCameraRight={50}
+      shadowCameraTop={50}
+      shadowCameraBottom={-50}
+    />
+    <pointLight position={[0, 10, 0]} intensity={0.5} color="#65C99A" />
 
+    {/* Sol et environnement */}
+    <ConcreteGround />
+    <Grass />
+    <Tree position={[-25, 0, -10]} />
+    <Tree position={[-25, 0, -20]} />
+    <Tree position={[-25, 0, -30]} />
+    <Tree position={[40, 0, -10]} />
+    <Tree position={[40, 0, -20]} />
+    <Tree position={[40, 0, -30]} />
+    <Sky
+      distance={450000}
+      sunPosition={[10, 20, 10]}
+      inclination={0}
+      azimuth={0.25}
+      rayleigh={0.1}
+      turbidity={0.2}
+      mieCoefficient={0.005}
+      mieDirectionalG={0.8}
+    />
+
+    {/* Postes de l'installation (avec onClick) */}
+    <WastePile onClick={() => !isTourActive && handleStageClick("collecte")} />
+    <SortingStation onClick={() => !isTourActive && handleStageClick("tri")} />
+    <Mixer onClick={() => !isTourActive && handleStageClick("pretraitement")} />
+    {["hydrolyse", "acidogenese", "acetogenese", "methanogenese"].includes(currentStage) ? (
+      <DigesterCutView stage={currentStage} />
+    ) : (
+      <Digester onClick={() => !isTourActive && handleStageClick("methaniseur")} />
+    )}
+    <GasTreatment onClick={() => !isTourActive && handleStageClick("traitement_biogaz")} />
+    <Cogeneration onClick={() => !isTourActive && handleStageClick("cogeneration")} />
+    <PhaseSeparation onClick={() => !isTourActive && handleStageClick("separation_phases")} />
+    <Torchere onClick={() => !isTourActive && handleStageClick("torchere")} />
+
+    {/* Clôtures */}
+    <Fence position={[-20, 0, 5]} length={10} />
+    <Fence position={[36, 0, 5]} length={10} />
+
+    {/* Connexions entre les postes */}
+    <Pipe from={[-17, 0.75, 0]} to={[-14, 1.5, 0]} color="#B88955" pulse />
+    <Pipe from={[-10, 1.5, 0]} to={[-6, 2.5, 0]} color="#C99A61" pulse />
+    <Pipe from={[-2, 0.5, 0]} to={[2, 2.5, 0]} color="#68B58C" pulse />
+    <Pipe from={[6, 4.5, 0]} to={[10, 2.5, 0]} color="#D8A93E" pulse />
+    <Pipe from={[14, 2.5, 0]} to={[18, 2.5, 0]} color="#D8A93E" pulse />
+    <Pipe from={[22, 1.5, 0]} to={[26, 1.5, 0]} color="#68B58C" pulse />
+
+    {/* Contrôles de caméra */}
+    <OrbitControls
+      ref={controlsRef}
+      enableDamping
+      dampingFactor={0.05}
+      minDistance={5}
+      maxDistance={100}
+      enablePan={!isTourActive}
+      enableRotate={!isTourActive}
+    />
+  </>
+);
+}
 // ============================================
 // APPLICATION PRINCIPALE
 // ============================================
@@ -953,6 +956,7 @@ function App() {
   const [currentWaypoint, setCurrentWaypoint] = useState(0);
   const [tourProgress, setTourProgress] = useState(0);
 
+  // Waypoints pour la visite guidée (incluant les sous-étapes du méthaniseur)
   const tourWaypoints = [
     {
       cameraPos: [-5, 10, 50],
@@ -981,8 +985,32 @@ function App() {
     {
       cameraPos: [0, 10, 8],
       target: [4, 0, 0],
-      text: "C'est le cœur du système ! Les micro-organismes décomposent la matière organique en absence d'oxygène, produisant du biogaz.",
+      text: "C'est le cœur du système ! Voici le méthaniseur où les micro-organismes décomposent la matière organique en absence d'oxygène.",
       stage: "methaniseur",
+    },
+    {
+      cameraPos: [0, 10, 5],
+      target: [4, 0, 0],
+      text: "Première étape de la digestion : l'hydrolyse, où les glucides, protéines et lipides sont décomposés en molécules simples.",
+      stage: "hydrolyse",
+    },
+    {
+      cameraPos: [0, 10, 5],
+      target: [4, 0, 0],
+      text: "Deuxième étape : l'acidogenèse, où les molécules simples sont transformées en acides organiques, alcools, CO₂ et H₂.",
+      stage: "acidogenese",
+    },
+    {
+      cameraPos: [0, 10, 5],
+      target: [4, 0, 0],
+      text: "Troisième étape : l'acétogenèse, où les acides et alcools sont convertis en acétate, H₂ et CO₂.",
+      stage: "acetogenese",
+    },
+    {
+      cameraPos: [0, 10, 5],
+      target: [4, 0, 0],
+      text: "Dernière étape : la méthanogenèse, où l'acétate, H₂ et CO₂ sont transformés en CH₄ (biogaz).",
+      stage: "methanogenese",
     },
     {
       cameraPos: [8, 10, 8],
@@ -1016,6 +1044,7 @@ function App() {
     },
   ];
 
+  const tourElapsedTime = useRef(0);
   const currentIndex = STAGES.findIndex(s => s.id === currentStage);
 
   const changeStage = (index) => {
@@ -1025,7 +1054,9 @@ function App() {
     }
   };
 
+  // FIX 3: Réinitialiser tourElapsedTime lors des contrôles de la visite
   const startTour = () => {
+    tourElapsedTime.current = 0;
     setIsTourActive(true);
     setCurrentWaypoint(0);
     setTourProgress(0);
@@ -1043,6 +1074,7 @@ function App() {
     setIsTourActive(false);
     setCurrentWaypoint(0);
     setTourProgress(0);
+    tourElapsedTime.current = 0; // Réinitialiser le temps accumulé
   };
 
   return (
@@ -1068,7 +1100,7 @@ function App() {
               </button>
               <button onClick={() => changeStage(0)}>Réinitialiser</button>
               <button onClick={startTour} className="tour-button">
-                🚀 Démarrer la visite
+                 Démarrer la visite
               </button>
             </>
           ) : (
@@ -1089,20 +1121,24 @@ function App() {
 
       <main>
         <section className="viewport">
-          <Canvas
-            camera={{ position: [-5, 10, 50], fov: 50 }}
-            shadows
-          >
-            <color attach="background" args={["#87CEEB"]} />
-            <Scene
-              currentStage={currentStage}
-              setCurrentStage={setCurrentStage}
-              isTourActive={isTourActive}
-              tourWaypoints={tourWaypoints}
-              setTourProgress={setTourProgress}
-              setCurrentWaypoint={setCurrentWaypoint}
-            />
-          </Canvas>
+         <Canvas
+          camera={{ position: [-5, 10, 50], fov: 50, near: 0.1, far: 1000 }}
+          shadows
+          gl={{ antialias: true, alpha: false }}
+          onCreated={({ gl }) => {
+            gl.setClearColor("#87CEEB");  // Fond cyan
+          }}
+    >
+      <Scene
+        currentStage={currentStage}
+        setCurrentStage={setCurrentStage}
+        isTourActive={isTourActive}
+        tourWaypoints={tourWaypoints}
+        setTourProgress={setTourProgress}
+        setCurrentWaypoint={setCurrentWaypoint}
+        tourElapsedTime={tourElapsedTime}
+      />
+    </Canvas>
           <div className="hint">
             {isTourActive
               ? `Visite en cours : ${Math.round(tourProgress * 100)}%`
