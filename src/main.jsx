@@ -615,6 +615,8 @@ function Digester({ onClick }) {
         <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
         <meshStandardMaterial color="#5A5A5A" metalness={0.6} roughness={0.4} />
       </mesh>
+      <ManholeCover position={[2, 8.2, 1.5]} />
+      <ManholeCover position={[-2, 8.2, 1.5]} />
 
       {/* Gas outlet pipe */}
       <mesh position={[0, 11.2, 0]} castShadow>
@@ -1496,6 +1498,158 @@ function DigestatePump({ position = [0, 0, 0] }) {
   );
 }
 
+// --- 22. Extincteurs ---
+function Extinguisher({ position }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.35, 0]} castShadow>
+        <cylinderGeometry args={[0.06, 0.06, 0.6, 12]} />
+        <meshStandardMaterial color="#CC0000" metalness={0.4} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 0.68, 0]} castShadow>
+        <cylinderGeometry args={[0.04, 0.06, 0.08, 12]} />
+        <meshStandardMaterial color="#333333" metalness={0.6} />
+      </mesh>
+      <mesh position={[0, 0.74, 0.04]} rotation={[0.5, 0, 0]}>
+        <boxGeometry args={[0.04, 0.04, 0.1]} />
+        <meshStandardMaterial color="#333333" metalness={0.6} />
+      </mesh>
+      <mesh position={[0.03, 0.55, 0.07]}>
+        <boxGeometry args={[0.06, 0.15, 0.02]} />
+        <meshStandardMaterial color="#F5F5F5" metalness={0.2} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 23. Câblage / conduits électriques ---
+function CableTray({ points }) {
+  return (
+    <group>
+      {points.map((p, i) => {
+        if (i === points.length - 1) return null;
+        const a = new THREE.Vector3(...points[i]);
+        const b = new THREE.Vector3(...points[i + 1]);
+        const mid = a.clone().add(b).multiplyScalar(0.5);
+        const dir = b.clone().sub(a);
+        const len = dir.length();
+        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+        return (
+          <group key={i}>
+            <mesh position={mid} quaternion={q}>
+              <boxGeometry args={[0.12, len, 0.06]} />
+              <meshStandardMaterial color="#4A4A4A" metalness={0.5} roughness={0.5} />
+            </mesh>
+            {i % 2 === 0 && (
+              <mesh position={[points[i][0], points[i][1] - 0.2, points[i][2]]} castShadow>
+                <boxGeometry args={[0.06, 0.4, 0.06]} />
+                <meshStandardMaterial color="#6A6A6A" metalness={0.6} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+// --- 24. Caniveaux de drainage ---
+function DrainageDitch({ from, to }) {
+  const a = new THREE.Vector3(...from);
+  const b = new THREE.Vector3(...to);
+  const mid = a.clone().add(b).multiplyScalar(0.5);
+  const dir = b.clone().sub(a);
+  const len = dir.length();
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+  return (
+    <group>
+      <mesh position={[mid.x, mid.y - 0.15, mid.z]} quaternion={q}>
+        <boxGeometry args={[0.8, len, 0.3]} />
+        <meshStandardMaterial color="#6B6B5A" roughness={0.95} metalness={0.05} transparent opacity={0.7} />
+      </mesh>
+      <mesh position={[from[0], from[1] - 0.15, from[2]]}>
+        <boxGeometry args={[0.8, 0.05, 0.3]} />
+        <meshStandardMaterial color="#5A5A4A" roughness={0.95} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 25. Vannes à brides ---
+function FlangedValve({ position, rotation = [0, 0, 0] }) {
+  return (
+    <group position={position} rotation={rotation}>
+      <mesh rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.4, 16]} />
+        <meshStandardMaterial color="#5A5A5A" metalness={0.8} />
+      </mesh>
+      <mesh position={[-0.22, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.04, 16]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.7} />
+      </mesh>
+      <mesh position={[0.22, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.04, 16]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.2, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.14, 0.14, 0.04, 16]} />
+        <meshStandardMaterial color="#5A5A5A" metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 0.3, 0]}>
+        <boxGeometry args={[0.04, 0.2, 0.04]} />
+        <meshStandardMaterial color="#5A5A5A" metalness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 26. Trappes de visite ---
+function ManholeCover({ position }) {
+  return (
+    <group position={position}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.5, 0.5, 0.08, 24]} />
+        <meshStandardMaterial color="#4A4A4A" metalness={0.7} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[0.35, 0.02, 8, 16]} />
+        <meshStandardMaterial color="#6A6A6A" metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0.05, 0]}>
+        <boxGeometry args={[0.08, 0.06, 0.08]} />
+        <meshStandardMaterial color="#6A6A6A" metalness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 27. Containment détaillé (double paroi + pompe relevage) ---
+function DetailedContainment({ position = [0, 0, 0], radius = 5.5 }) {
+  return (
+    <group position={position}>
+      {Array.from({ length: 24 }, (_, i) => {
+        const angle = (i / 24) * Math.PI * 2;
+        const x = Math.sin(angle) * (radius + 0.3);
+        const z = Math.cos(angle) * (radius + 0.3);
+        return (
+          <mesh key={`outer-${i}`} position={[x, 0.3, z]} rotation={[0, -angle, 0]} castShadow>
+            <boxGeometry args={[1.5, 0.6, 0.12]} />
+            <meshStandardMaterial color="#A0A8AC" roughness={0.9} metalness={0.1} />
+          </mesh>
+        );
+      })}
+      <mesh position={[radius + 0.5, 0.15, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.3, 0.5]} />
+        <meshStandardMaterial color="#2E5090" metalness={0.5} roughness={0.4} />
+      </mesh>
+      <mesh position={[radius + 0.5, 0.35, 0]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.2, 8]} />
+        <meshStandardMaterial color="#C0C0C0" metalness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
 // ============================================
 // SCÈNE PRINCIPALE (avec fixes des 3 bugs)
 // ============================================
@@ -1642,6 +1796,7 @@ function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, set
     <ControlBuilding onClick={() => !isTourActive && handleStageClick("controle")} />
     <AtexSigns />
     <ContainmentBerm />
+    <DetailedContainment position={[0, 0, 0]} radius={5.5} />
     <Instrumentation />
     <GasDetector position={[6, 0, 3]} />
     <GasDetector position={[13, 0, 3]} />
@@ -1658,6 +1813,28 @@ function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, set
     <LightPole position={[12, 0, 7]} />
     <LightPole position={[27, 0, 7]} />
     <DigestatePump position={[16, 0, 2]} />
+
+    {/* Extincteurs */}
+    <Extinguisher position={[-19, 0, 3]} />
+    <Extinguisher position={[4, 0, -3]} />
+    <Extinguisher position={[12, 0, -3]} />
+    <Extinguisher position={[20, 0, 3]} />
+    <Extinguisher position={[36, 0, -2]} />
+
+    {/* Câblage / conduits électriques */}
+    <CableTray points={[[6, 0.3, 3], [6, 0.3, 8], [0, 0.3, 8], [0, 0.3, 12]]} />
+    <CableTray points={[[13, 0.3, 3], [13, 0.3, 8], [0, 0.3, 10]]} />
+    <CableTray points={[[18, 0.3, 3], [18, 0.3, 8], [0, 0.3, 11]]} />
+
+    {/* Caniveaux de drainage */}
+    <DrainageDitch from={[-22, 0, 9]} to={[42, 0, 9]} />
+    <DrainageDitch from={[-22, 0, -6]} to={[42, 0, -6]} />
+
+    {/* Vannes à brides */}
+    <FlangedValve position={[6, 2, 0]} />
+    <FlangedValve position={[15, 1.7, 0]} />
+    <FlangedValve position={[-9, 1.1, 0]} />
+    <FlangedValve position={[24, 1.5, 0]} />
 
     {/* Clôtures */}
     <Fence position={[-20, 0, 5]} length={10} />
