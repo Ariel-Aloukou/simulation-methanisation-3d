@@ -45,12 +45,14 @@ export function WastePile({ onClick }) {
 }
 
 // --- 2. Station de tri (hangar industriel réaliste) ---
-export function SortingStation({ onClick }) {
+export function SortingStation({ onClick, xray }) {
   return (
     <group position={[-12, 0, 0]} onClick={onClick}>
       <mesh position={[0, 2.25, 0]} castShadow receiveShadow>
         <boxGeometry args={[6, 4.5, 5]} />
-        <meshStandardMaterial color="#7A8A92" metalness={0.4} roughness={0.6} />
+        {xray
+          ? <meshPhysicalMaterial color="#8A9AA2" transparent opacity={0.2} transmission={0.3} roughness={0.6} metalness={0.3} side={THREE.DoubleSide} />
+          : <meshStandardMaterial color="#7A8A92" metalness={0.4} roughness={0.6} />}
       </mesh>
       {Array.from({ length: 10 }, (_, i) => (
         <mesh key={`wall-${i}`} position={[-3 + i * 0.6, 2.25, 2.51]} castShadow>
@@ -124,7 +126,7 @@ export function SortingStation({ onClick }) {
 }
 
 // --- 3. Broyeur / Mélangeur ---
-export function Mixer({ onClick }) {
+export function Mixer({ onClick, xray }) {
   const ref = useRef();
   useFrame((_, dt) => {
     if (ref.current) ref.current.rotation.y += dt * 1.2;
@@ -134,7 +136,9 @@ export function Mixer({ onClick }) {
     <group position={[-4, 0, 0]} onClick={onClick}>
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2, 2, 3, 48]} />
-        <meshStandardMaterial color="#46555A" metalness={0.8} roughness={0.3} />
+        {xray
+          ? <meshPhysicalMaterial color="#5A7A88" transparent opacity={0.25} transmission={0.3} roughness={0.6} metalness={0.3} side={THREE.DoubleSide} />
+          : <meshStandardMaterial color="#46555A" metalness={0.8} roughness={0.3} />}
       </mesh>
       <mesh position={[0, 3, 0]} castShadow>
         <cylinderGeometry args={[2.1, 2.1, 0.2, 48]} />
@@ -174,10 +178,11 @@ export function Mixer({ onClick }) {
 }
 
 // --- 4. Méthaniseur (cuve béton, dôme EPDM, agitateurs) ---
-export function Digester({ onClick }) {
+export function Digester({ onClick, xray }) {
   const domeRef = useRef();
   const sideAgitatorRef = useRef();
   const topAgitatorRef = useRef();
+  const bubblesRef = useRef();
 
   useFrame(({ clock }) => {
     if (domeRef.current) {
@@ -189,7 +194,21 @@ export function Digester({ onClick }) {
     if (topAgitatorRef.current) {
       topAgitatorRef.current.rotation.y += 0.008;
     }
+    if (bubblesRef.current && xray) {
+      bubblesRef.current.children.forEach((b, i) => {
+        b.position.y += 0.015 + Math.sin(clock.getElapsedTime() * 2 + i) * 0.005;
+        if (b.position.y > 6.5) b.position.y = 0.5;
+      });
+    }
   });
+
+  const bodyMat = xray
+    ? <meshPhysicalMaterial color="#88A8A0" transparent opacity={0.35} transmission={0.25} roughness={0.8} metalness={0.1} side={THREE.DoubleSide} />
+    : <meshStandardMaterial color="#B0B8BC" roughness={0.85} metalness={0.1} />;
+
+  const domeMat = xray
+    ? <meshStandardMaterial color="#D0D8DC" transparent opacity={0.25} roughness={0.7} metalness={0.05} />
+    : <meshStandardMaterial color="#E0E0E0" roughness={0.7} metalness={0.05} />;
 
   return (
     <group position={[4, 0, 0]} onClick={onClick}>
@@ -199,7 +218,7 @@ export function Digester({ onClick }) {
       </mesh>
       <mesh position={[0, 3.5, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[4, 4, 7, 64]} />
-        <meshStandardMaterial color="#B0B8BC" roughness={0.85} metalness={0.1} />
+        {bodyMat}
       </mesh>
       {[1.5, 3, 4.5, 6].map((y, i) => (
         <mesh key={i} position={[0, y, 0]} castShadow>
@@ -213,12 +232,32 @@ export function Digester({ onClick }) {
       </mesh>
       <mesh ref={domeRef} position={[0, 7, 0]} castShadow>
         <sphereGeometry args={[4.1, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#E0E0E0" roughness={0.7} metalness={0.05} />
+        {domeMat}
       </mesh>
       <mesh position={[0, 7, 0]} castShadow>
         <torusGeometry args={[4.1, 0.12, 8, 64]} />
         <meshStandardMaterial color="#6D6D6D" metalness={0.7} roughness={0.3} />
       </mesh>
+      {xray && (
+        <>
+          <mesh position={[0, 3, 0]}>
+            <cylinderGeometry args={[3.8, 3.8, 5.5, 48]} />
+            <meshStandardMaterial color="#4A6B3A" transparent opacity={0.5} roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 5.8, 0]}>
+            <cylinderGeometry args={[3.8, 3.8, 0.3, 48]} />
+            <meshStandardMaterial color="#5A8048" transparent opacity={0.35} roughness={0.5} />
+          </mesh>
+          <group ref={bubblesRef}>
+            {Array.from({ length: 15 }, (_, i) => (
+              <mesh key={i} position={[(Math.random() - 0.5) * 5, 0.5 + Math.random() * 6, (Math.random() - 0.5) * 5]}>
+                <sphereGeometry args={[0.08 + Math.random() * 0.12, 8, 8]} />
+                <meshStandardMaterial color="#B8D8A0" transparent opacity={0.5} emissive="#5A8048" emissiveIntensity={0.3} />
+              </mesh>
+            ))}
+          </group>
+        </>
+      )}
       {Array.from({ length: 6 }, (_, i) => {
         const angle = (i / 6) * Math.PI * 2;
         return (
@@ -334,6 +373,24 @@ export function Digester({ onClick }) {
       <Label position={[0, 11.5, 0]} color="#68B58C" style={{ fontSize: "10px" }}>
         (Digestion anaérobie + Dôme EPDM)
       </Label>
+      <group position={[-4.5, 5, 2]}>
+        <Html center style={{ pointerEvents: "none" }}>
+          <div style={{ background: "#0d1418dd", border: "1px solid #68B58C", borderRadius: "5px", padding: "6px 10px", fontFamily: "'Space Mono', monospace", fontSize: "10px", whiteSpace: "nowrap", color: "#68B58C" }}>
+            <div style={{ fontWeight: 700, marginBottom: "2px" }}>CONDITIONS</div>
+            <div>T° : <span style={{ color: "#F87171" }}>37.4°C</span> · pH : <span style={{ color: "#FBBF24" }}>7.1</span></div>
+            <div>TRH : <span style={{ color: "#C6D0D5" }}>30 jours</span> · <span style={{ color: "#C6D0D5" }}>Mésophile</span></div>
+          </div>
+        </Html>
+      </group>
+      <group position={[-4.5, 3, 2]}>
+        <Html center style={{ pointerEvents: "none" }}>
+          <div style={{ background: "#0d1418dd", border: "1px solid #D8A93E", borderRadius: "5px", padding: "5px 8px", fontFamily: "'Space Mono', monospace", fontSize: "9px", whiteSpace: "nowrap", color: "#D8A93E" }}>
+            <div>CH₄ : <span style={{ color: "#65C99A" }}>50–75%</span></div>
+            <div>CO₂ : <span style={{ color: "#8B989F" }}>25–50%</span></div>
+            <div>Δ : <span style={{ color: "#C6D0D5" }}>~120 m³/t MS</span></div>
+          </div>
+        </Html>
+      </group>
       <Worker position={[5, 0, -2]} />
     </group>
   );
@@ -450,12 +507,14 @@ function GasCloud() {
 }
 
 // --- 5. Traitement du biogaz ---
-export function GasTreatment({ onClick }) {
+export function GasTreatment({ onClick, xray }) {
   return (
     <group position={[12, 0, 0]} onClick={onClick}>
       <mesh position={[0, 1, 0]} castShadow receiveShadow>
         <boxGeometry args={[3.5, 2, 2.5]} />
-        <meshStandardMaterial color="#34464C" metalness={0.5} roughness={0.4} />
+        {xray
+          ? <meshPhysicalMaterial color="#4A5A62" transparent opacity={0.25} transmission={0.3} roughness={0.4} metalness={0.3} side={THREE.DoubleSide} />
+          : <meshStandardMaterial color="#34464C" metalness={0.5} roughness={0.4} />}
       </mesh>
       <mesh position={[0, 2.1, 0]} castShadow>
         <boxGeometry args={[3.7, 0.15, 2.7]} />
@@ -463,7 +522,9 @@ export function GasTreatment({ onClick }) {
       </mesh>
       <mesh position={[-1, 3, 0]} castShadow>
         <cylinderGeometry args={[0.7, 0.7, 6, 32]} />
-        <meshStandardMaterial color="#B0B8BC" metalness={0.6} roughness={0.3} />
+        {xray
+          ? <meshPhysicalMaterial color="#B8C0C8" transparent opacity={0.3} transmission={0.25} roughness={0.4} metalness={0.3} side={THREE.DoubleSide} />
+          : <meshStandardMaterial color="#B0B8BC" metalness={0.6} roughness={0.3} />}
       </mesh>
       <mesh position={[-1, 6.1, 0]} castShadow>
         <cylinderGeometry args={[0.8, 0.8, 0.2, 32]} />
@@ -489,12 +550,14 @@ export function GasTreatment({ onClick }) {
 }
 
 // --- 6. Cogénération (container CHP 40 pieds) ---
-export function Cogeneration({ onClick }) {
+export function Cogeneration({ onClick, xray }) {
   return (
     <group position={[20, 0, 0]} onClick={onClick}>
       <mesh position={[0, 1.4, 0]} castShadow receiveShadow>
         <boxGeometry args={[8, 2.8, 2.6]} />
-        <meshStandardMaterial color="#D4A017" metalness={0.3} roughness={0.5} />
+        {xray
+          ? <meshPhysicalMaterial color="#D4A017" transparent opacity={0.2} transmission={0.25} roughness={0.4} metalness={0.3} side={THREE.DoubleSide} />
+          : <meshStandardMaterial color="#D4A017" metalness={0.3} roughness={0.5} />}
       </mesh>
       <mesh position={[0, 2.9, 0]} castShadow>
         <boxGeometry args={[8.1, 0.1, 2.7]} />
@@ -544,7 +607,7 @@ export function Cogeneration({ onClick }) {
 }
 
 // --- 7. Séparation de phases (séparateur à vis réaliste) ---
-export function PhaseSeparation({ onClick }) {
+export function PhaseSeparation({ onClick, xray }) {
   return (
     <group position={[28, 0, 0]} onClick={onClick}>
       <mesh position={[0, 0.1, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
@@ -569,7 +632,9 @@ export function PhaseSeparation({ onClick }) {
       ))}
       <mesh position={[0, 1.8, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.45, 0.45, 3.6, 32]} />
-        <meshStandardMaterial color="#C0C0C0" metalness={0.7} roughness={0.3} />
+        {xray
+          ? <meshPhysicalMaterial color="#C8C8C8" transparent opacity={0.3} transmission={0.25} roughness={0.4} metalness={0.4} side={THREE.DoubleSide} />
+          : <meshStandardMaterial color="#C0C0C0" metalness={0.7} roughness={0.3} />}
       </mesh>
       <mesh position={[0.3, 1.8, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.48, 0.48, 1.5, 32]} />

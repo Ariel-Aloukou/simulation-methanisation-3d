@@ -17,8 +17,10 @@ import {
   DigestatePump, Extinguisher, CableTray, DrainageDitch, FlangedValve,
   DetailedContainment,
 } from "./details";
+import { ProcessFlow } from "./ProcessFlow";
+import { GlossaryPanel } from "./components";
 
-function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, setTourProgress, setCurrentWaypoint, tourElapsedTime }) {
+function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, setTourProgress, setCurrentWaypoint, tourElapsedTime, xray }) {
   const { camera, gl } = useThree();
   const controlsRef = useRef();
   const targetPosition = useRef(new THREE.Vector3());
@@ -197,16 +199,16 @@ function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, set
     />
 
     <WastePile onClick={() => !isTourActive && handleStageClick("collecte")} />
-    <SortingStation onClick={() => !isTourActive && handleStageClick("tri")} />
-    <Mixer onClick={() => !isTourActive && handleStageClick("pretraitement")} />
+    <SortingStation onClick={() => !isTourActive && handleStageClick("tri")} xray={xray} />
+    <Mixer onClick={() => !isTourActive && handleStageClick("pretraitement")} xray={xray} />
     {["hydrolyse", "acidogenese", "acetogenese", "methanogenese"].includes(currentStage) ? (
       <DigesterCutView stage={currentStage} />
     ) : (
-      <Digester onClick={() => !isTourActive && handleStageClick("methaniseur")} />
+      <Digester onClick={() => !isTourActive && handleStageClick("methaniseur")} xray={xray} />
     )}
-    <GasTreatment onClick={() => !isTourActive && handleStageClick("traitement_biogaz")} />
-    <Cogeneration onClick={() => !isTourActive && handleStageClick("cogeneration")} />
-    <PhaseSeparation onClick={() => !isTourActive && handleStageClick("separation_phases")} />
+    <GasTreatment onClick={() => !isTourActive && handleStageClick("traitement_biogaz")} xray={xray} />
+    <Cogeneration onClick={() => !isTourActive && handleStageClick("cogeneration")} xray={xray} />
+    <PhaseSeparation onClick={() => !isTourActive && handleStageClick("separation_phases")} xray={xray} />
     <Torchere onClick={() => !isTourActive && handleStageClick("torchere")} />
     <ControlBuilding onClick={() => !isTourActive && handleStageClick("controle")} />
     <AtexSigns />
@@ -287,90 +289,92 @@ function App() {
   const [isTourActive, setIsTourActive] = useState(false);
   const [currentWaypoint, setCurrentWaypoint] = useState(0);
   const [tourProgress, setTourProgress] = useState(0);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [xrayMode, setXrayMode] = useState(false);
 
   const tourWaypoints = [
     {
       cameraPos: [-5, 10, 50],
       target: [0, 0, 0],
-      text: "Bienvenue dans cette visite guidée d'une installation de méthanisation. Nous allons explorer chaque étape du processus.",
+      text: "Bienvenue dans cette visite guidée d'une installation de méthanisation industrielle. Nous allons explorer chaque étape du processus, de la collecte des déchets organiques à la production d'énergie renouvelable.",
       stage: null,
     },
     {
       cameraPos: [-25, 8, 0],
       target: [-20, 0, 0],
-      text: "Ici, les déchets organiques (fumier, déchets alimentaires, résidus agricoles) sont collectés avant d'entrer dans le processus.",
+      text: "Étape 1 — Collecte : Les déchets organiques sont acheminés par camions-bennes ou pompiers. Substrats courants : fumier (15–25% MS), marc de pomme, résidus verts, lisiers porcins. Le ratio C/N optimal est de 20–30:1 pour assurer une bonne digestion.",
       stage: "collecte",
     },
     {
       cameraPos: [-17, 8, 0],
       target: [-12, 0, 0],
-      text: "Dans cette station, les éléments indésirables (pierres, sable, produits chimiques) sont retirés pour éviter de perturber le processus.",
+      text: "Étape 2 — Réception et tri : Les matériaux indésirables (pierres, métaux, plastiques, verre) sont retirés par crible vibrant et tri manuel. Le taux de rejet est de 5–15% du flux brut. C'est une étape essentielle pour protéger le broyeur en aval.",
       stage: "tri",
     },
     {
       cameraPos: [-9, 8, 0],
       target: [-4, 0, 0],
-      text: "Le substrat est broyé, mélangé et homogénéisé pour faciliter la digestion dans le méthaniseur.",
+      text: "Étape 3 — Prétraitement : Le substrat est broyé à < 10 mm puis mélangé pour obtenir une homogénéité optimale. La teneur en matière sèche est ajustée à 10–12% par ajout d'eau si nécessaire. Le broyeur consomme 15–30 kW.",
       stage: "pretraitement",
     },
     {
       cameraPos: [0, 10, 8],
       target: [4, 0, 0],
-      text: "C'est le cœur du système ! Voici le méthaniseur où les micro-organismes décomposent la matière organique en absence d'oxygène.",
+      text: "Étape 4 — Méthaniseur : C'est le cœur du système ! Cette cuve béton de 500–2 000 m³ maintient une température de 35–37°C (régime mésophile) où des archées méthanogènes (Methanosarcina, Methanosaeta) décomposent la matière organique en absence d'oxygène. Le temps de rétention est de 20–40 jours. Le biogaz produit (~120 m³/tonne MS) s'accumule sous le dôme EPDM.",
       stage: "methaniseur",
     },
     {
       cameraPos: [0, 10, 5],
       target: [4, 0, 0],
-      text: "Première étape de la digestion : l'hydrolyse, où les glucides, protéines et lipides sont décomposés en molécules simples.",
+      text: "Hydrolyse — Étape limitante : Les bactéries extracellulaires (Clostridium, Bacteroides) sécrètent des enzymes (cellulases, protéines, lipases) qui décomposent les polymères en monomères. Équation : (C₆H₁₀O₅)ₙ + nH₂O → nC₆H₁₂O₆ (glucose).",
       stage: "hydrolyse",
     },
     {
       cameraPos: [0, 10, 5],
       target: [4, 0, 0],
-      text: "Deuxième étape : l'acidogenèse, où les molécules simples sont transformées en acides organiques, alcools, CO₂ et H₂.",
+      text: "Acidogenèse : Les bactéries fermentaires (Clostridium, E. coli) transforment les sucres en acides gras volatils (propionique, butyrique), alcools, CO₂ et H₂. Le pH chute à 5.5–6.5. Équation : C₆H₁₂O₆ → 2CH₃COOH + 2CO₂ + 2H₂.",
       stage: "acidogenese",
     },
     {
       cameraPos: [0, 10, 5],
       target: [4, 0, 0],
-      text: "Troisième étape : l'acétogenèse, où les acides et alcools sont convertis en acétate, H₂ et CO₂.",
+      text: "Acétogenèse : Les bactéries acétogènes (Syntrophomonas) convertissent les AGV en acétate, H₂ et CO₂. Cette étape est en symbiose obligatoire avec les méthanogènes : elle nécessite une pression partielle H₂ < 10⁻⁴ atm pour être favorable.",
       stage: "acetogenese",
     },
     {
       cameraPos: [0, 10, 5],
       target: [4, 0, 0],
-      text: "Dernière étape : la méthanogenèse, où l'acétate, H₂ et CO₂ sont transformés en CH₄ (biogaz).",
+      text: "Méthanogenèse — Production de CH₄ : Deux voies par les archées. Voie acétoclastique (CH₃COOH → CH₄ + CO₂, 70%) et voie hydrogénotrope (CO₂ + 4H₂ → CH₄ + 2H₂O, 30%). Rendement : ~350 L CH₄/kg matière volatile.",
       stage: "methanogenese",
     },
     {
       cameraPos: [8, 10, 8],
       target: [12, 0, 0],
-      text: "Le biogaz est épuré (H₂S, CO₂, humidité) puis stocké sous un dôme EPDM à faible pression.",
+      text: "Étape 5 — Épuration du biogaz : Le biogaz brut contient H₂S (50–5 000 ppm, toxique et corrosif). Il est épuré par filtration ferrique ou bioréparation avant stockage sous dôme EPDM souple à 5–30 mbar. Le biométhane (> 95% CH₄) peut être injecté en réseau.",
       stage: "traitement_biogaz",
     },
     {
       cameraPos: [16, 10, 8],
       target: [20, 0, 0],
-      text: "Le biogaz alimente un moteur de cogénération, produisant 35% d'électricité et 65% de chaleur.",
+      text: "Étape 6 — Cogénération : Le biogaz alimente un moteur à combustion interne. Rendement : 35% électricité (100–500 kWe) + 65% chaleur récupérée pour le chauffage ou le séchage. Consommation : ~6 000 m³ biogaz/MWh. Le méthane (GWP = 28×CO₂) est transformé en CO₂ biogénique (neutre en carbone).",
       stage: "cogeneration",
     },
     {
       cameraPos: [24, 10, 8],
       target: [28, 0, 0],
-      text: "Le digestat est séparé en phase solide (dalle béton) et phase liquide (cuve de stockage) pour épandage agronomique.",
+      text: "Étape 7 — Séparation de phases : Le digestat sorti du méthaniseur est séparé par screw press en phase solide (30–40% DS → compost, paillage) et phase liquide (60–70%, 3–5 g/L azote → engrais azoté). Le C/N du compost final est < 20.",
       stage: "separation_phases",
     },
     {
       cameraPos: [32, 10, 8],
       target: [36, 0, 0],
-      text: "La torchère brûle l'excédent de biogaz en cas de surproduction ou de maintenance, pour des raisons de sécurité.",
+      text: "Étape 8 — Torchère : En cas de surproduction ou maintenance, la torchère brûle l'excédent de CH₄ (~1 000°C). Le méthane (GWP = 28×CO₂) est ainsi transformé en CO₂, réduisant l'impact climatique de 96%. Norme ATEX / EN 1127-1.",
       stage: "torchere",
     },
     {
       cameraPos: [0, 15, 50],
       target: [0, 0, 0],
-      text: "Merci d'avoir visité cette installation de méthanisation ! Vous savez maintenant comment les déchets organiques sont transformés en énergie renouvelable.",
+      text: "Merci d'avoir visité cette installation de méthanisation ! Vous savez maintenant comment 5 000–10 000 tonnes de déchets organiques par an sont transformées en 500 kWe d'électricité renouvelable et en engrais agronomique.",
       stage: null,
     },
   ];
@@ -467,8 +471,16 @@ function App() {
         setTourProgress={setTourProgress}
         setCurrentWaypoint={setCurrentWaypoint}
         tourElapsedTime={tourElapsedTime}
+        xray={xrayMode}
       />
     </Canvas>
+          <button className={"xray-btn" + (xrayMode ? " active" : "")} onClick={() => setXrayMode(v => !v)}>
+            🔍 Mode X-ray
+          </button>
+          <button className="glossary-btn" onClick={() => setGlossaryOpen(true)}>
+            📖 GLOSSAIRE
+          </button>
+          <ProcessFlow currentStage={currentStage} onStageClick={(id) => !isTourActive && setCurrentStage(id)} />
           <div className="hint">
             {isTourActive
               ? `Visite en cours : ${Math.round(tourProgress * 100)}%`
@@ -496,22 +508,50 @@ function App() {
                 </p>
                 <p>{tourWaypoints[currentWaypoint]?.text}</p>
               </div>
-            ) : (
-              <>
-                <div className="stage-number">
-                  {String(currentIndex + 1).padStart(2, "0")}
-                </div>
-                <h2>{STAGES.find(s => s.id === currentStage)?.title}</h2>
-                <p>{STAGES.find(s => s.id === currentStage)?.text}</p>
-                <div className="progress">
-                  <span
-                    style={{
-                      width: `${((currentIndex + 1) / STAGES.length) * 100}%`,
-                    }}
-                  />
-                </div>
-              </>
-            )}
+            ) : (() => {
+              const stage = STAGES.find(s => s.id === currentStage);
+              if (!stage) return null;
+              return (
+                <>
+                  <div className="stage-number">
+                    {String(currentIndex + 1).padStart(2, "0")}
+                  </div>
+                  <h2>{stage.title}</h2>
+                  <p>{stage.text}</p>
+                  <div className="progress">
+                    <span style={{ width: `${((currentIndex + 1) / STAGES.length) * 100}%` }} />
+                  </div>
+                  {stage.equation && (
+                    <div className="stage-extra">
+                      <h4>ÉQUATION</h4>
+                      <p style={{ fontFamily: "'Space Mono', monospace", color: "#C6D0D5", fontSize: "11px" }}>{stage.equation}</p>
+                    </div>
+                  )}
+                  {stage.bacteria && stage.bacteria !== "—" && (
+                    <div className="stage-extra" style={{ borderLeftColor: "#D8A93E", marginTop: "6px" }}>
+                      <h4 style={{ color: "#D8A93E" }}>MICRO-ORGANISMES</h4>
+                      <p>{stage.bacteria}</p>
+                    </div>
+                  )}
+                  {stage.temperature && stage.temperature !== "Ambiante" && (
+                    <div className="stage-metrics">
+                      <div className="stage-metric">
+                        <div className="stage-metric-label">T°</div>
+                        <div className="stage-metric-value">{stage.temperature}</div>
+                      </div>
+                      <div className="stage-metric">
+                        <div className="stage-metric-label">pH</div>
+                        <div className="stage-metric-value">{stage.ph}</div>
+                      </div>
+                      <div className="stage-metric">
+                        <div className="stage-metric-label">TRH</div>
+                        <div className="stage-metric-value">{stage.retentionTime}</div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           <div className="panel">
@@ -530,25 +570,35 @@ function App() {
           </div>
 
           <div className="panel facts">
-            <div>
-              <b>Biogaz</b>
-              <span>CH₄ (50-75%) + CO₂ + H₂S</span>
+            <div className="panel-title" style={{ marginBottom: "8px" }}>
+              {isTourActive ? "DONNÉES GÉNÉRALES" : `DONNÉES — ${STAGES.find(s => s.id === currentStage)?.title?.toUpperCase() || ""}`}
             </div>
-            <div>
-              <b>Digestat</b>
-              <span>Phase solide + liquide</span>
-            </div>
-            <div>
-              <b>Cogénération</b>
-              <span>35% électricité, 65% chaleur</span>
-            </div>
-            <div>
-              <b>Pression gazomètre</b>
-              <span>Quelques mbar (dôme EPDM)</span>
-            </div>
+            {isTourActive ? (
+              <>
+                <div><b>Biogaz</b><span>CH₄ (50-75%) + CO₂ + H₂S</span></div>
+                <div><b>Cogénération</b><span>35% électricité, 65% chaleur</span></div>
+                <div><b>Pression gazomètre</b><span>Quelques mbar (dôme EPDM)</span></div>
+                <div><b>Capacité</b><span>5 000–10 000 t/an</span></div>
+              </>
+            ) : (() => {
+              const stage = STAGES.find(s => s.id === currentStage);
+              const facts = stage?.facts;
+              if (!facts || facts.length === 0) return <p style={{ fontSize: "12px" }}>Aucune donnée spécifique pour cette étape.</p>;
+              return (
+                <div className="facts-dynamic">
+                  {facts.map((f, i) => (
+                    <div key={i} className="fact-row">
+                      <span className="fact-label">{f.label}</span>
+                      <span className="fact-value">{f.value}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </aside>
       </main>
+      <GlossaryPanel isOpen={glossaryOpen} onClose={() => setGlossaryOpen(false)} />
     </div>
   );
 }

@@ -1,51 +1,49 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
 import { Label } from "./components";
 
+// --- Jauge animée ---
+function AnimatedGauge({ position, unit, baseValue, color, fluctuation = 0.1, decimals = 1 }) {
+  const [value, setValue] = useState(baseValue);
+  const timer = useRef(0);
+  useFrame((_, delta) => {
+    timer.current += delta;
+    if (timer.current > 0.5) {
+      timer.current = 0;
+      setValue(+(baseValue + (Math.random() - 0.5) * fluctuation * 2).toFixed(decimals));
+    }
+  });
+  return (
+    <group position={position}>
+      <mesh castShadow>
+        <cylinderGeometry args={[0.15, 0.15, 0.12, 16]} />
+        <meshStandardMaterial color="#888888" metalness={0.8} />
+      </mesh>
+      <Html position={[0, 0, 0.15]} center style={{ pointerEvents: "none" }}>
+        <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#111", border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "8px", color, fontFamily: "'Space Mono', monospace", fontWeight: 700 }}>
+          {value}{unit}
+        </div>
+      </Html>
+      <mesh position={[0, 0, 0.08]} castShadow>
+        <sphereGeometry args={[0.12, 12, 12]} />
+        <meshStandardMaterial color="#333" transparent opacity={0.8} />
+      </mesh>
+      <mesh position={[0, -0.3, 0]} castShadow>
+        <boxGeometry args={[0.04, 0.5, 0.04]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
 // --- Instrumentation (manomètres, capteurs, vannes) ---
 export function Instrumentation() {
   return (
     <group>
-      <group position={[-2, 5, 4]}>
-        <mesh castShadow>
-          <cylinderGeometry args={[0.15, 0.15, 0.12, 16]} />
-          <meshStandardMaterial color="#888888" metalness={0.8} />
-        </mesh>
-        <Html position={[0, 0, 0.15]} center style={{ pointerEvents: "none" }}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#222", border: "2px solid #999", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "7px", color: "#4ADE80", fontFamily: "monospace" }}>
-            1.2 bar
-          </div>
-        </Html>
-        <mesh position={[0, 0, 0.08]} castShadow>
-          <sphereGeometry args={[0.12, 12, 12]} />
-          <meshStandardMaterial color="#333" transparent opacity={0.8} />
-        </mesh>
-        <mesh position={[0, -0.3, 0]} castShadow>
-          <boxGeometry args={[0.04, 0.5, 0.04]} />
-          <meshStandardMaterial color="#8A8A8A" metalness={0.7} />
-        </mesh>
-      </group>
-      <group position={[-2, 5, -4]}>
-        <mesh castShadow>
-          <cylinderGeometry args={[0.15, 0.15, 0.12, 16]} />
-          <meshStandardMaterial color="#888888" metalness={0.8} />
-        </mesh>
-        <Html position={[0, 0, 0.15]} center style={{ pointerEvents: "none" }}>
-          <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#222", border: "2px solid #999", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "7px", color: "#F87171", fontFamily: "monospace" }}>
-            37.4°C
-          </div>
-        </Html>
-        <mesh position={[0, 0, 0.08]} castShadow>
-          <sphereGeometry args={[0.12, 12, 12]} />
-          <meshStandardMaterial color="#333" transparent opacity={0.8} />
-        </mesh>
-        <mesh position={[0, -0.3, 0]} castShadow>
-          <boxGeometry args={[0.04, 0.5, 0.04]} />
-          <meshStandardMaterial color="#8A8A8A" metalness={0.7} />
-        </mesh>
-      </group>
+      <AnimatedGauge position={[-2, 5, 4]} unit=" bar" baseValue={1.2} color="#4ADE80" fluctuation={0.05} decimals={1} />
+      <AnimatedGauge position={[-2, 5, -4]} unit="°C" baseValue={37.4} color="#F87171" fluctuation={0.3} decimals={1} />
       <group position={[-2, 3, 4]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.06, 0.06, 0.3, 12]} />

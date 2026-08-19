@@ -1,7 +1,8 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
+import { GLOSSARY } from "./glossary";
 
 // --- Label 3D ---
 export function Label({ children, position = [0, 0, 0], color = "#65C99A", style = {} }) {
@@ -11,6 +12,52 @@ export function Label({ children, position = [0, 0, 0], color = "#65C99A", style
         {children}
       </div>
     </Html>
+  );
+}
+
+// --- Terme glossaire avec tooltip ---
+export function GlossaryTerm({ term, children }) {
+  const [hovered, setHovered] = useState(false);
+  const entry = GLOSSARY[term];
+  if (!entry) return <>{children || term}</>;
+  return (
+    <span
+      className="glossary-term"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ position: "relative", borderBottom: "1px dotted #65C99A", cursor: "help" }}
+    >
+      {children || entry.term}
+      {hovered && (
+        <span className="glossary-tooltip">
+          <strong>{entry.term}</strong><br />
+          {entry.shortDef}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// --- Panneau glossaire complet ---
+export function GlossaryPanel({ isOpen, onClose }) {
+  if (!isOpen) return null;
+  return (
+    <div className="glossary-overlay" onClick={onClose}>
+      <div className="glossary-panel" onClick={e => e.stopPropagation()}>
+        <div className="glossary-panel-header">
+          <span className="panel-title">GLOSSAIRE TECHNIQUE</span>
+          <button className="glossary-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="glossary-list">
+          {Object.entries(GLOSSARY).map(([key, entry]) => (
+            <div key={key} className="glossary-item">
+              <div className="glossary-item-term">{entry.term}</div>
+              <div className="glossary-item-def">{entry.definition}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
