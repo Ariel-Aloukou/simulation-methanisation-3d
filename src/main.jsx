@@ -19,13 +19,18 @@ import {
 } from "./details";
 
 function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, setTourProgress, setCurrentWaypoint, tourElapsedTime }) {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
   const controlsRef = useRef();
   const targetPosition = useRef(new THREE.Vector3());
   const targetLookAt = useRef(new THREE.Vector3());
   const isMoving = useRef(false);
   const waypointDuration = 5;
   const cameraSpeed = 0.1;
+
+  const lastClickTime = useRef(0);
+  const isDoubleClickPan = useRef(false);
+  const lastMouseX = useRef(0);
+  const lastMouseY = useRef(0);
 
   useEffect(() => {
     if (!isTourActive) {
@@ -46,6 +51,56 @@ function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, set
       isMoving.current = true;
     }
   };
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+
+    const onPointerDown = (e) => {
+      if (isTourActive || e.button !== 0) return;
+      const now = performance.now();
+      if (now - lastClickTime.current < 350) {
+        isDoubleClickPan.current = true;
+        lastMouseX.current = e.clientX;
+        lastMouseY.current = e.clientY;
+        canvas.classList.add("grabbing");
+        if (controlsRef.current) controlsRef.current.enabled = false;
+      }
+      lastClickTime.current = now;
+    };
+
+    const onPointerMove = (e) => {
+      if (!isDoubleClickPan.current || !controlsRef.current) return;
+      const dx = e.clientX - lastMouseX.current;
+      const dy = e.clientY - lastMouseY.current;
+      lastMouseX.current = e.clientX;
+      lastMouseY.current = e.clientY;
+      const dist = camera.position.distanceTo(controlsRef.current.target);
+      const panSpeed = 0.004 * dist;
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+      const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      right.multiplyScalar(-dx * panSpeed);
+      up.multiplyScalar(dy * panSpeed);
+      camera.position.add(right).add(up);
+      controlsRef.current.target.add(right).add(up);
+    };
+
+    const onPointerUp = () => {
+      if (isDoubleClickPan.current) {
+        isDoubleClickPan.current = false;
+        canvas.classList.remove("grabbing");
+        if (controlsRef.current) controlsRef.current.enabled = true;
+      }
+    };
+
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", onPointerUp);
+    return () => {
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", onPointerUp);
+    };
+  }, [gl, camera, isTourActive]);
 
   useFrame((_, delta) => {
   if (isMoving.current && controlsRef.current?.target && !isTourActive) {
@@ -207,9 +262,19 @@ function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, set
     <OrbitControls
       ref={controlsRef}
       enableDamping
-      dampingFactor={0.05}
+      dampingFactor={0.08}
       minDistance={5}
       maxDistance={100}
+      minPolarAngle={0.2}
+      maxPolarAngle={Math.PI / 2.05}
+      panSpeed={1.0}
+      zoomSpeed={1.2}
+      rotateSpeed={0.6}
+      mouseButtons={{
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN,
+      }}
       enablePan={!isTourActive}
       enableRotate={!isTourActive}
     />
@@ -407,7 +472,7 @@ function App() {
           <div className="hint">
             {isTourActive
               ? `Visite en cours : ${Math.round(tourProgress * 100)}%`
-              : "Glisser = rotation · Molette = zoom · Clic droit = déplacement · Clic sur une étape = centrer la caméra"}
+              : "Clic gauche = Tourner · Double-clic glisser / Clic droit glisser = Déplacer · Molette = Zoom · Clic sur étape = Centrer"}
           </div>
           {isTourActive && (
             <div className="tour-progress">
