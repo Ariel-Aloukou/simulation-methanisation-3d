@@ -1,22 +1,38 @@
 import React, { useRef, useState, useMemo } from "react";
 import { createRoot } from "react-dom/client";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Sky, Html, OrbitControls } from "@react-three/drei";
+import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
+import { Sky, Html, OrbitControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
+import { TextureLoader } from "three";
 import "./styles.css";
+
+// ============================================
+// TEXTURES
+// ============================================
+function useTexture(url) {
+  return useLoader(TextureLoader, url);
+}
+
+const TEXTURES = {
+  metalRusty: "https://threejs.org/examples/textures/hardwood2_diffuse.jpg",
+  concrete: "https://threejs.org/examples/textures/concrete_diffuse.jpg",
+  grass: "https://threejs.org/examples/textures/grass.jpg",
+  epdm: "https://threejs.org/examples/textures/rubber.jpg",
+  wood: "https://threejs.org/examples/textures/wood.jpg",
+};
 
 // ============================================
 // DONNÉES : Étapes du processus
 // ============================================
 const STAGES = [
-  { id: "collecte", label: "01 · Collecte", title: "Collecte des déchets", text: "Les déchets organiques sont réunis comme matière première du processus.", color: "#B88955", position: [-12, 0, 0] },
-  { id: "tri", label: "02 · Réception / Tri", title: "Réception et tri", text: "Les éléments indésirables (pierres, sable, produits chimiques) sont retirés avant d'entrer dans le processus.", color: "#B88955", position: [-6, 0, 0] },
-  { id: "pretraitement", label: "03 · Prétraitement", title: "Prétraitement", text: "Le substrat est broyé, mélangé et homogénéisé pour faciliter la digestion.", color: "#C99A61", position: [0, 0, 0] },
-  { id: "methaniseur", label: "04 · Méthaniseur", title: "Digestion anaérobie", text: "Cœur du système : les micro-organismes décomposent la matière organique en absence d'oxygène (hydrolyse → acidogenèse → acétogenèse → méthanogenèse).", color: "#68B58C", position: [6, 0, 0] },
-  { id: "traitement_biogaz", label: "05 · Traitement du biogaz", title: "Épuration et stockage", text: "Le biogaz est épuré (H₂S, CO₂, humidité) puis stocké sous un dôme EPDM à faible pression (quelques mbar).", color: "#D8A93E", position: [12, 0, 0] },
-  { id: "cogeneration", label: "06 · Cogénération", title: "Production d'énergie", text: "Le biogaz alimente un moteur de cogénération (rendement électrique ~35%, le reste en chaleur).", color: "#DE7248", position: [18, 0, 0] },
-  { id: "separation_phases", label: "07 · Séparation de phases", title: "Traitement du digestat", text: "Le digestat est séparé en phase solide (dalle béton) et phase liquide (cuve de stockage) pour épandage agronomique.", color: "#58C993", position: [24, 0, 0] },
-  { id: "torchere", label: "08 · Torchère", title: "Sécurité", text: "La torchère brûle l'excédent de biogaz en cas de surproduction ou de maintenance.", color: "#FF5722", position: [30, 0, 0] },
+  { id: "collecte", label: "01 · Collecte", title: "Collecte des déchets", text: "Les déchets organiques sont réunis comme matière première du processus.", color: "#B88955", position: [-20, 0, 0] },
+  { id: "tri", label: "02 · Réception / Tri", title: "Réception et tri", text: "Les éléments indésirables (pierres, sable, produits chimiques) sont retirés avant d'entrer dans le processus.", color: "#B88955", position: [-12, 0, 0] },
+  { id: "pretraitement", label: "03 · Prétraitement", title: "Prétraitement", text: "Le substrat est broyé, mélangé et homogénéisé pour faciliter la digestion.", color: "#C99A61", position: [-4, 0, 0] },
+  { id: "methaniseur", label: "04 · Méthaniseur", title: "Digestion anaérobie", text: "Cœur du système : les micro-organismes décomposent la matière organique en absence d'oxygène.", color: "#68B58C", position: [4, 0, 0] },
+  { id: "traitement_biogaz", label: "05 · Traitement du biogaz", title: "Épuration et stockage", text: "Le biogaz est épuré (H₂S, CO₂, humidité) puis stocké sous un dôme EPDM.", color: "#D8A93E", position: [12, 0, 0] },
+  { id: "cogeneration", label: "06 · Cogénération", title: "Production d'énergie", text: "Le biogaz alimente un moteur de cogénération (35% électricité, 65% chaleur).", color: "#DE7248", position: [20, 0, 0] },
+  { id: "separation_phases", label: "07 · Séparation de phases", title: "Traitement du digestat", text: "Le digestat est séparé en phase solide et liquide pour épandage agronomique.", color: "#58C993", position: [28, 0, 0] },
+  { id: "torchere", label: "08 · Torchère", title: "Sécurité", text: "La torchère brûle l'excédent de biogaz en cas de surproduction.", color: "#FF5722", position: [36, 0, 0] },
 ];
 
 // ============================================
@@ -24,10 +40,10 @@ const STAGES = [
 // ============================================
 
 // --- Label 3D ---
-function Label({ children, position = [0, 0, 0], color = "#65C99A" }) {
+function Label({ children, position = [0, 0, 0], color = "#65C99A", style = {} }) {
   return (
     <Html center position={position} distanceFactor={10}>
-      <div className="scene-label" style={{ color, borderColor: color }}>
+      <div className="scene-label" style={{ color, borderColor: color, ...style }}>
         {children}
       </div>
     </Html>
@@ -47,7 +63,7 @@ function Pipe({ from, to, color = "#65C99A", pulse = false, width = 0.1 }) {
     <group>
       <mesh position={mid} quaternion={q} castShadow receiveShadow>
         <cylinderGeometry args={[width, width, len, 16]} />
-        <meshStandardMaterial color="#314047" metalness={0.6} roughness={0.4} />
+        <meshStandardMaterial color="#314047" metalness={0.8} roughness={0.3} />
       </mesh>
       {pulse && <FlowParticle from={from} to={to} color={color} />}
     </group>
@@ -73,13 +89,236 @@ function FlowParticle({ from, to, color }) {
   );
 }
 
-// --- Sol en béton ---
+// --- Sol en béton texturé ---
 function ConcreteGround() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
       <planeGeometry args={[100, 100]} />
-      <meshStandardMaterial color="#5A6A72" roughness={0.9} metalness={0.1} />
+      <meshStandardMaterial
+        color="#5A6A72"
+        roughness={0.9}
+        metalness={0.1}
+      />
     </mesh>
+  );
+}
+
+// --- Herbe autour du sol ---
+function Grass() {
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-25, -0.05, -25]} receiveShadow>
+        <planeGeometry args={[10, 50]} />
+        <meshStandardMaterial color="#4CAF50" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[25, -0.05, -25]} receiveShadow>
+        <planeGeometry args={[10, 50]} />
+        <meshStandardMaterial color="#4CAF50" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, -25]} receiveShadow>
+        <planeGeometry args={[50, 10]} />
+        <meshStandardMaterial color="#4CAF50" />
+      </mesh>
+    </group>
+  );
+}
+
+// --- Arbre simple ---
+function Tree({ position = [0, 0, 0] }) {
+  return (
+    <group position={position}>
+      <mesh castShadow>
+        <cylinderGeometry args={[0.3, 0.2, 3, 16]} />
+        <meshStandardMaterial color="#8B4513" />
+      </mesh>
+      <mesh position={[0, 3, 0]} castShadow>
+        <sphereGeometry args={[1.5, 16, 16]} />
+        <meshStandardMaterial color="#228B22" />
+      </mesh>
+    </group>
+  );
+}
+
+// --- Clôture de sécurité ---
+function Fence({ position = [0, 0, 0], length = 10 }) {
+  return (
+    <group position={position}>
+      {Array.from({ length: Math.floor(length / 2) }, (_, i) => (
+        <group key={i} position={[i * 2, 0, 0]}>
+          <mesh castShadow>
+            <boxGeometry args={[0.1, 2, 0.1]} />
+            <meshStandardMaterial color="#5A6A72" metalness={0.6} />
+          </mesh>
+          <mesh position={[0, 1, 0]} castShadow>
+            <boxGeometry args={[2, 0.1, 0.1]} />
+            <meshStandardMaterial color="#5A6A72" metalness={0.6} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// --- Panneaux solaires ---
+function SolarPanel({ position = [0, 0, 0] }) {
+  return (
+    <group position={position} rotation={[Math.PI / 4, 0, 0]}>
+      <mesh castShadow>
+        <boxGeometry args={[2, 0.1, 1]} />
+        <meshStandardMaterial color="#1A237E" metalness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- Camion de collecte ---
+function Truck({ position = [0, 0, 0] }) {
+  const wheelRef = useRef();
+  useFrame(({ clock }) => {
+    if (wheelRef.current) {
+      wheelRef.current.rotation.x += 0.1;
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh position={[0, 1, 0]} castShadow>
+        <boxGeometry args={[3, 1.5, 1.5]} />
+        <meshStandardMaterial color="#FF5722" metalness={0.5} />
+      </mesh>
+      <mesh position={[0, 1.8, 0]} castShadow>
+        <boxGeometry args={[2, 1, 1]} />
+        <meshStandardMaterial color="#8B4513" />
+      </mesh>
+      <group ref={wheelRef}>
+        <mesh position={[-1, 0.5, 0.8]} castShadow>
+          <cylinderGeometry args={[0.4, 0.4, 0.3, 16]} />
+          <meshStandardMaterial color="#333" />
+        </mesh>
+        <mesh position={[-1, 0.5, -0.8]} castShadow>
+          <cylinderGeometry args={[0.4, 0.4, 0.3, 16]} />
+          <meshStandardMaterial color="#333" />
+        </mesh>
+        <mesh position={[1, 0.5, 0.8]} castShadow>
+          <cylinderGeometry args={[0.4, 0.4, 0.3, 16]} />
+          <meshStandardMaterial color="#333" />
+        </mesh>
+        <mesh position={[1, 0.5, -0.8]} castShadow>
+          <cylinderGeometry args={[0.4, 0.4, 0.3, 16]} />
+          <meshStandardMaterial color="#333" />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+// --- Fumée (particules animées) ---
+function Smoke({ position = [0, 0, 0], color = "#808080" }) {
+  const particles = useMemo(() => {
+    const count = 50;
+    const positions = [];
+    for (let i = 0; i < count; i++) {
+      positions.push([
+        (Math.random() - 0.5) * 2,
+        Math.random() * 3,
+        (Math.random() - 0.5) * 2,
+      ]);
+    }
+    return positions;
+  }, []);
+
+  const ref = useRef();
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      ref.current.children.forEach((particle, i) => {
+        particle.position.y += 0.02 + Math.sin(clock.getElapsedTime() * 2 + i) * 0.01;
+        particle.position.x += Math.sin(clock.getElapsedTime() * 0.5 + i) * 0.01;
+        particle.position.z += Math.cos(clock.getElapsedTime() * 0.3 + i) * 0.01;
+        if (particle.position.y > 5) {
+          particle.position.y = 0;
+        }
+      });
+    }
+  });
+
+  return (
+    <group ref={ref} position={position}>
+      {particles.map((p, i) => (
+        <mesh key={i} position={p}>
+          <sphereGeometry args={[0.2, 8, 8]} />
+          <meshStandardMaterial
+            color={color}
+            transparent
+            opacity={0.6}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// --- Opérateur (personnage simple) ---
+function Worker({ position = [0, 0, 0] }) {
+  const headRef = useRef();
+  const armRef = useRef();
+  useFrame(({ clock }) => {
+    if (headRef.current) {
+      headRef.current.rotation.y = Math.sin(clock.getElapsedTime() * 2) * 0.2;
+    }
+    if (armRef.current) {
+      armRef.current.rotation.x = Math.sin(clock.getElapsedTime() * 1.5) * 0.3;
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh castShadow>
+        <boxGeometry args={[0.4, 0.8, 0.3]} />
+        <meshStandardMaterial color="#1E88E5" />
+      </mesh>
+      <mesh ref={headRef} position={[0, 1.2, 0]} castShadow>
+        <sphereGeometry args={[0.2, 16, 16]} />
+        <meshStandardMaterial color="#FFC107" />
+      </mesh>
+      <group ref={armRef} position={[0, 1, 0]}>
+        <mesh position={[0.3, 0, 0]} castShadow>
+          <boxGeometry args={[0.1, 0.4, 0.1]} />
+          <meshStandardMaterial color="#1E88E5" />
+        </mesh>
+        <mesh position={[-0.3, 0, 0]} castShadow>
+          <boxGeometry args={[0.1, 0.4, 0.1]} />
+          <meshStandardMaterial color="#1E88E5" />
+        </mesh>
+      </group>
+      <mesh position={[0, 0.4, 0]} castShadow>
+        <boxGeometry args={[0.1, 0.4, 0.1]} />
+        <meshStandardMaterial color="#5D4037" />
+      </mesh>
+      <mesh position={[0, 0.4, 0]} castShadow>
+        <boxGeometry args={[0.1, 0.4, 0.1]} />
+        <meshStandardMaterial color="#5D4037" />
+      </mesh>
+    </group>
+  );
+}
+
+// --- Projecteur (éclairage local) ---
+function Spotlight({ position = [0, 0, 0], color = "#FFFFFF", intensity = 1 }) {
+  return (
+    <group position={position}>
+      <spotLight
+        color={color}
+        intensity={intensity}
+        distance={20}
+        angle={Math.PI / 6}
+        penumbra={0.5}
+        castShadow
+      />
+      <mesh castShadow>
+        <cylinderGeometry args={[0.2, 0.1, 0.5, 16]} />
+        <meshStandardMaterial color="#333" metalness={0.8} />
+      </mesh>
+    </group>
   );
 }
 
@@ -100,22 +339,27 @@ function WastePile() {
   );
 
   return (
-    <group position={[-12, 0.75, 0]}>
-      {items.map((d, i) => (
-        <mesh key={i} position={d.p} rotation={d.r} scale={d.s} castShadow>
-          <dodecahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial
-            color={i % 4 === 0 ? "#4F6845" : i % 3 === 0 ? "#8C6A43" : "#6D5338"}
-            roughness={0.9}
-          />
-        </mesh>
-      ))}
+    <group position={[-20, 0, 0]}>
+      <group position={[-1, 0, 0]}>
+        {items.map((d, i) => (
+          <mesh key={i} position={d.p} rotation={d.r} scale={d.s} castShadow>
+            <dodecahedronGeometry args={[1, 0]} />
+            <meshStandardMaterial
+              color={i % 4 === 0 ? "#4F6845" : i % 3 === 0 ? "#8C6A43" : "#6D5338"}
+              roughness={0.9}
+              metalness={0.1}
+            />
+          </mesh>
+        ))}
+      </group>
+      <Truck position={[2, 0, 1]} />
       <Label position={[0, 2.5, 0]} color="#B88955">
         DÉCHETS ORGANIQUES
       </Label>
       <Label position={[0, 2, 0]} color="#B88955" style={{ fontSize: "10px" }}>
         (Fumier, déchets alimentaires, résidus agricoles)
       </Label>
+      <Worker position={[1, 0, -1]} />
     </group>
   );
 }
@@ -123,23 +367,19 @@ function WastePile() {
 // --- 2. Station de tri ---
 function SortingStation() {
   return (
-    <group position={[-6, 0, 0]}>
-      {/* Bâtiment de tri */}
+    <group position={[-12, 0, 0]}>
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[4, 3, 3]} />
-        <meshStandardMaterial color="#28363B" metalness={0.35} roughness={0.7} />
+        <meshStandardMaterial color="#8B4513" />
       </mesh>
-      {/* Toit */}
       <mesh position={[0, 3, 0]} castShadow>
         <boxGeometry args={[4.2, 0.2, 3.2]} />
-        <meshStandardMaterial color="#3C4C51" />
+        <meshStandardMaterial color="#5A6A72" metalness={0.6} />
       </mesh>
-      {/* Convoyeur */}
       <mesh position={[0, 1.5, 1.6]} rotation={[0, 0, Math.PI / 4]} castShadow>
         <boxGeometry args={[4.5, 0.1, 0.8]} />
-        <meshStandardMaterial color="#4A5A62" metalness={0.5} />
+        <meshStandardMaterial color="#4A5A62" metalness={0.8} />
       </mesh>
-      {/* Éléments sur le convoyeur */}
       <group position={[0, 1.6, 1.6]}>
         {Array.from({ length: 8 }, (_, i) => (
           <mesh
@@ -151,6 +391,7 @@ function SortingStation() {
             <boxGeometry args={[1, 1, 1]} />
             <meshStandardMaterial
               color={i % 3 === 0 ? "#66747A" : "#765B3D"}
+              metalness={0.3}
             />
           </mesh>
         ))}
@@ -161,6 +402,7 @@ function SortingStation() {
       <Label position={[0, 3.5, 0]} color="#B88955" style={{ fontSize: "10px" }}>
         (Séparation des indésirables)
       </Label>
+      <Worker position={[1, 0, -1]} />
     </group>
   );
 }
@@ -173,43 +415,36 @@ function Mixer() {
   });
 
   return (
-    <group position={[0, 0, 0]}>
-      {/* Cuve du broyeur */}
+    <group position={[-4, 0, 0]}>
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[2, 2, 3, 48]} />
-        <meshStandardMaterial color="#46555A" metalness={0.5} roughness={0.5} />
+        <meshStandardMaterial color="#46555A" metalness={0.8} roughness={0.3} />
       </mesh>
-      {/* Couvercle */}
       <mesh position={[0, 3, 0]} castShadow>
         <cylinderGeometry args={[2.1, 2.1, 0.2, 48]} />
-        <meshStandardMaterial color="#69C799" emissive="#163B2A" emissiveIntensity={0.6} />
+        <meshStandardMaterial color="#69C799" emissive="#163B2A" emissiveIntensity={0.6} metalness={0.7} />
       </mesh>
-      {/* Agitateur (pales) */}
       <group ref={ref} position={[0, 1.5, 0]}>
-        {/* Arbre central */}
         <mesh castShadow>
           <cylinderGeometry args={[0.1, 0.1, 4.5, 16]} />
-          <meshStandardMaterial color="#3A4A52" metalness={0.7} />
+          <meshStandardMaterial color="#3A4A52" metalness={0.9} />
         </mesh>
-        {/* Pales */}
         {Array.from({ length: 4 }, (_, i) => (
           <group key={i} position={[0, (i - 1.5) * 1.2, 0]} rotation={[0, 0, i * (Math.PI / 2)]}>
             <mesh castShadow>
               <boxGeometry args={[1.8, 0.1, 0.15]} />
-              <meshStandardMaterial color="#5A6A72" metalness={0.5} />
+              <meshStandardMaterial color="#5A6A72" metalness={0.8} />
             </mesh>
           </group>
         ))}
       </group>
-      {/* Entrée du substrat */}
       <mesh position={[-2.5, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
         <cylinderGeometry args={[0.3, 0.3, 1, 16]} />
-        <meshStandardMaterial color="#314047" metalness={0.6} />
+        <meshStandardMaterial color="#314047" metalness={0.8} />
       </mesh>
-      {/* Sortie vers le méthaniseur */}
       <mesh position={[2.5, 0.5, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
         <cylinderGeometry args={[0.3, 0.3, 1, 16]} />
-        <meshStandardMaterial color="#314047" metalness={0.6} />
+        <meshStandardMaterial color="#314047" metalness={0.8} />
       </mesh>
       <Label position={[0, 4, 0]} color="#C99A61">
         BROYEUR / MÉLANGEUR
@@ -217,6 +452,7 @@ function Mixer() {
       <Label position={[0, 3.5, 0]} color="#C99A61" style={{ fontSize: "10px" }}>
         (Homogénéisation du substrat)
       </Label>
+      <Worker position={[2, 0, -1]} />
     </group>
   );
 }
@@ -226,7 +462,6 @@ function Digester({ onClick }) {
   const domeRef = useRef();
   const agitatorRef = useRef();
 
-  // Animation du dôme (légère pulsation pour simuler le gaz)
   useFrame(({ clock }) => {
     if (domeRef.current) {
       domeRef.current.scale.y = 1 + Math.sin(clock.getElapsedTime() * 0.5) * 0.02;
@@ -237,8 +472,7 @@ function Digester({ onClick }) {
   });
 
   return (
-    <group position={[6, 0, 0]} onClick={onClick}>
-      {/* Cuve du digesteur (cylindre principal) */}
+    <group position={[4, 0, 0]} onClick={onClick}>
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[3, 3, 5, 64, 1, true]} />
         <meshPhysicalMaterial
@@ -247,12 +481,10 @@ function Digester({ onClick }) {
           opacity={0.3}
           transmission={0.2}
           side={THREE.DoubleSide}
-          metalness={0.1}
+          metalness={0.2}
           roughness={0.3}
         />
       </mesh>
-
-      {/* Dôme EPDM (gazomètre) */}
       <mesh ref={domeRef} position={[0, 4.5, 0]} castShadow>
         <sphereGeometry args={[3.1, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial
@@ -260,56 +492,47 @@ function Digester({ onClick }) {
           emissive="#005500"
           emissiveIntensity={0.2}
           roughness={0.8}
+          metalness={0.1}
         />
       </mesh>
-
-      {/* Agitateurs (2 pales visibles à travers la paroi) */}
       <group ref={agitatorRef} position={[0, 1.5, 0]}>
-        {/* Arbre central */}
         <mesh castShadow>
           <cylinderGeometry args={[0.1, 0.1, 4.5, 16]} />
-          <meshStandardMaterial color="#3A4A52" metalness={0.7} />
+          <meshStandardMaterial color="#3A4A52" metalness={0.9} />
         </mesh>
-        {/* Pales */}
         {Array.from({ length: 4 }, (_, i) => (
           <group key={i} position={[0, (i - 1.5) * 1.2, 0]} rotation={[0, 0, i * (Math.PI / 2)]}>
             <mesh castShadow>
               <boxGeometry args={[1.8, 0.1, 0.15]} />
-              <meshStandardMaterial color="#5A6A72" metalness={0.5} />
+              <meshStandardMaterial color="#5A6A72" metalness={0.8} />
             </mesh>
           </group>
         ))}
       </group>
-
-      {/* Entrée du substrat */}
       <mesh position={[-3.5, 2.5, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
         <cylinderGeometry args={[0.25, 0.25, 1, 16]} />
-        <meshStandardMaterial color="#314047" metalness={0.6} />
+        <meshStandardMaterial color="#314047" metalness={0.8} />
       </mesh>
-
-      {/* Sortie du digestat */}
       <mesh position={[3.5, 0.5, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
         <cylinderGeometry args={[0.25, 0.25, 1, 16]} />
-        <meshStandardMaterial color="#314047" metalness={0.6} />
+        <meshStandardMaterial color="#314047" metalness={0.8} />
       </mesh>
-
-      {/* Sortie du biogaz (vers le dôme) */}
       <mesh position={[0, 4.5, 0]} castShadow>
         <cylinderGeometry args={[0.2, 0.2, 0.5, 16]} />
-        <meshStandardMaterial color="#314047" metalness={0.6} />
+        <meshStandardMaterial color="#314047" metalness={0.8} />
       </mesh>
-
       <Label position={[0, 6, 0]} color="#68B58C">
         MÉTHANISEUR
       </Label>
       <Label position={[0, 5.5, 0]} color="#68B58C" style={{ fontSize: "10px" }}>
         (Digestion anaérobie + Dôme EPDM)
       </Label>
+      <Worker position={[3, 0, -2]} />
     </group>
   );
 }
 
-// --- Vue en coupe du méthaniseur (pour les étapes biologiques) ---
+// --- Vue en coupe du méthaniseur ---
 function DigesterCutView({ stage }) {
   const cfg = {
     hydrolyse: { color: "#C99A61", left: ["Glucides", "Protéines", "Lipides"], right: ["Sucres", "Acides aminés", "Acides gras"] },
@@ -321,8 +544,7 @@ function DigesterCutView({ stage }) {
   const isMeth = stage === "methanogenese";
 
   return (
-    <group position={[6, 0, 0]}>
-      {/* Cuve en coupe (transparente) */}
+    <group position={[4, 0, 0]}>
       <mesh position={[0, 1.5, 0]}>
         <cylinderGeometry args={[3, 3, 5, 64, 1, true, 0, Math.PI]} />
         <meshPhysicalMaterial
@@ -331,34 +553,25 @@ function DigesterCutView({ stage }) {
           opacity={0.2}
           transmission={0.3}
           side={THREE.DoubleSide}
+          metalness={0.2}
         />
       </mesh>
-
-      {/* Dôme EPDM */}
       <mesh position={[0, 4.5, 0]}>
         <sphereGeometry args={[3.1, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#1A2A20" transparent opacity={0.4} />
+        <meshStandardMaterial color="#1A2A20" transparent opacity={0.4} roughness={0.8} />
       </mesh>
-
-      {/* Molécules à gauche */}
       <group position={[-1.5, 0, 0]}>
         {cfg?.left?.map((t, i) => (
           <Molecule key={t} label={t} y={(i - (cfg.left.length - 1) / 2) * 1.2} color="#B88955" />
         ))}
       </group>
-
-      {/* Molécules à droite */}
       <group position={[1.5, 0, 0]}>
         {cfg?.right?.map((t, i) => (
           <Molecule key={t} label={t} y={(i - (cfg.right.length - 1) / 2) * 1.2} color={isMeth ? "#D8A93E" : "#65C99A"} />
         ))}
       </group>
-
-      {/* Flèches de flux */}
       <ArrowFlow color={cfg?.color || "#65C99A"} />
       {isMeth && <GasCloud />}
-
-      {/* Titre de l'étape */}
       <Label position={[0, 5, 0]} color={cfg?.color || "#65C99A"}>
         {STAGES.find(s => s.id === stage)?.title.toUpperCase()}
       </Label>
@@ -372,7 +585,7 @@ function Molecule({ label, y, color }) {
     <group position={[0, y, 0]}>
       <mesh castShadow>
         <icosahedronGeometry args={[0.35, 1]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.25} />
+        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.25} metalness={0.3} />
       </mesh>
       <Label position={[0, 0.6, 0]} color={color}>
         {label}
@@ -388,7 +601,7 @@ function ArrowFlow({ color }) {
       {[-1, 0, 1].map((y, i) => (
         <mesh key={i} position={[0, y, 0.05]} rotation={[0, 0, -Math.PI / 2]} castShadow>
           <coneGeometry args={[0.12, 0.4, 8]} />
-          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.7} metalness={0.5} />
         </mesh>
       ))}
     </group>
@@ -410,6 +623,8 @@ function GasCloud() {
             color={i % 2 ? "#59CB91" : "#D8A93E"}
             emissive={i % 2 ? "#0A4B30" : "#5A4000"}
             emissiveIntensity={1}
+            transparent
+            opacity={0.8}
           />
         </mesh>
       ))}
@@ -417,140 +632,104 @@ function GasCloud() {
   );
 }
 
-// --- 5. Traitement du biogaz (Épuration + Stockage) ---
+// --- 5. Traitement du biogaz ---
 function GasTreatment() {
   return (
     <group position={[12, 0, 0]}>
-      {/* Bâtiment d'épuration */}
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[3, 3, 2]} />
-        <meshStandardMaterial color="#34464C" metalness={0.5} roughness={0.5} />
+        <meshStandardMaterial color="#34464C" metalness={0.7} roughness={0.4} />
       </mesh>
-
-      {/* Toit */}
       <mesh position={[0, 3, 0]} castShadow>
         <boxGeometry args={[3.2, 0.2, 2.2]} />
-        <meshStandardMaterial color="#4A5A62" />
+        <meshStandardMaterial color="#4A5A62" metalness={0.6} />
       </mesh>
-
-      {/* Filtre à H₂S (cylindre avec particules) */}
       <mesh position={[-1.5, 1.5, 0]} castShadow>
         <cylinderGeometry args={[0.8, 0.8, 2, 32]} />
-        <meshStandardMaterial color="#5A6A72" metalness={0.6} />
+        <meshStandardMaterial color="#5A6A72" metalness={0.8} />
       </mesh>
-
-      {/* Stockage sous dôme EPDM (plus petit) */}
       <mesh position={[1.5, 2.5, 0]} castShadow>
         <sphereGeometry args={[1.2, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#1A2A20" emissive="#005500" emissiveIntensity={0.2} />
+        <meshStandardMaterial color="#1A2A20" emissive="#005500" emissiveIntensity={0.2} roughness={0.8} />
       </mesh>
-
-      {/* Tuyau d'entrée (depuis le méthaniseur) */}
-      <Pipe from={[3, 2.5, 0]} to={[4.5, 2.5, 0]} color="#D8A93E" pulse />
-
-      {/* Tuyau de sortie (vers la cogénération) */}
-      <Pipe from={[-4.5, 2.5, 0]} to={[-3, 2.5, 0]} color="#D8A93E" pulse />
-
       <Label position={[0, 4, 0]} color="#D8A93E">
         TRAITEMENT DU BIOGAZ
       </Label>
       <Label position={[0, 3.5, 0]} color="#D8A93E" style={{ fontSize: "10px" }}>
         (Épuration H₂S/CO₂ + Stockage)
       </Label>
+      <Worker position={[1, 0, -1]} />
     </group>
   );
 }
 
-// --- 6. Cogénération (moteur industriel) ---
+// --- 6. Cogénération ---
 function Cogeneration() {
   return (
-    <group position={[18, 0, 0]}>
-      {/* Conteneur technique (moteur) */}
+    <group position={[20, 0, 0]}>
       <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
         <boxGeometry args={[4, 2.5, 3]} />
-        <meshStandardMaterial color="#2C3E44" metalness={0.6} roughness={0.4} />
+        <meshStandardMaterial color="#2C3E44" metalness={0.8} roughness={0.3} />
       </mesh>
-
-      {/* Toit du conteneur */}
       <mesh position={[0, 2.8, 0]} castShadow>
         <boxGeometry args={[4.2, 0.2, 3.2]} />
-        <meshStandardMaterial color="#3C4C51" />
+        <meshStandardMaterial color="#3C4C51" metalness={0.7} />
       </mesh>
-
-      {/* Échappement (cheminée) */}
+      <SolarPanel position={[0, 3.2, 0]} />
+      <SolarPanel position={[0, 3.2, 1.5]} />
+      <SolarPanel position={[0, 3.2, -1.5]} />
       <mesh position={[0, 3.5, 0]} castShadow>
         <cylinderGeometry args={[0.3, 0.3, 2, 16]} />
-        <meshStandardMaterial color="#3A4A52" metalness={0.7} />
+        <meshStandardMaterial color="#3A4A52" metalness={0.9} />
       </mesh>
-
-      {/* Radiateur (pour la chaleur) */}
       <mesh position={[2, 1.5, 0]} rotation={[0, Math.PI / 2, 0]} castShadow>
         <boxGeometry args={[0.2, 1.5, 1]} />
-        <meshStandardMaterial color="#DE7248" emissive="#8A3B00" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#DE7248" emissive="#8A3B00" emissiveIntensity={0.5} metalness={0.6} />
       </mesh>
-
-      {/* Générateur (électricité) */}
       <mesh position={[-2, 1.5, 0]} castShadow>
         <boxGeometry args={[1, 1, 1.5]} />
-        <meshStandardMaterial color="#E2B93E" emissive="#8A6B00" emissiveIntensity={0.5} />
+        <meshStandardMaterial color="#E2B93E" emissive="#8A6B00" emissiveIntensity={0.5} metalness={0.7} />
       </mesh>
-
-      {/* Tuyau d'entrée (biogaz) */}
-      <Pipe from={[-3, 2.5, 0]} to={[-4.5, 2.5, 0]} color="#D8A93E" pulse />
-
-      {/* Sortie chaleur */}
-      <Pipe from={[2, 1.5, 0]} to={[3.5, 1.5, 0]} color="#DE7248" pulse />
-
-      {/* Sortie électricité */}
-      <Pipe from={[-2, 1.5, 0]} to={[-3.5, 1.5, 0]} color="#E2B93E" pulse />
-
+      <Smoke position={[0, 5.5, 0]} color="#808080" />
       <Label position={[0, 4, 0]} color="#DE7248">
         COGÉNÉRATION
       </Label>
       <Label position={[0, 3.5, 0]} color="#DE7248" style={{ fontSize: "10px" }}>
         (35% électricité, 65% chaleur)
       </Label>
+      <Worker position={[-2, 0, -1]} />
+      <Spotlight position={[3, 5, 0]} color="#FFEB3B" intensity={0.8} />
     </group>
   );
 }
 
-// --- 7. Séparation de phases (digestat) ---
+// --- 7. Séparation de phases ---
 function PhaseSeparation() {
   return (
-    <group position={[24, 0, 0]}>
-      {/* Dalle béton (phase solide) */}
+    <group position={[28, 0, 0]}>
       <mesh position={[0, 0.1, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[4, 4]} />
-        <meshStandardMaterial color="#5A6A72" roughness={0.9} />
+        <meshStandardMaterial color="#5A6A72" roughness={0.9} metalness={0.1} />
       </mesh>
-
-      {/* Tas de digestat solide */}
       <mesh position={[-1.5, 0.5, 0]} castShadow>
         <boxGeometry args={[2, 0.5, 2]} />
         <meshStandardMaterial color="#4F6845" roughness={0.8} />
       </mesh>
-
-      {/* Cuve de stockage (phase liquide) */}
       <mesh position={[1.5, 1.5, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[1.5, 1.5, 3, 32]} />
-        <meshStandardMaterial color="#34464C" metalness={0.4} />
+        <meshStandardMaterial color="#34464C" metalness={0.6} />
       </mesh>
-
-      {/* Séparateur (cylindre horizontal) */}
       <mesh position={[0, 1.5, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
         <cylinderGeometry args={[1, 1, 3, 32]} />
-        <meshStandardMaterial color="#4A5A62" metalness={0.5} />
+        <meshStandardMaterial color="#4A5A62" metalness={0.7} />
       </mesh>
-
-      {/* Tuyau d'entrée (depuis le méthaniseur) */}
-      <Pipe from={[-3, 1.5, 0]} to={[-4.5, 1.5, 0]} color="#68B58C" pulse />
-
       <Label position={[0, 3, 0]} color="#58C993">
         SÉPARATION DE PHASES
       </Label>
       <Label position={[0, 2.5, 0]} color="#58C993" style={{ fontSize: "10px" }}>
         (Solide → dalle | Liquide → cuve)
       </Label>
+      <Worker position={[1, 0, -1]} />
     </group>
   );
 }
@@ -558,8 +737,6 @@ function PhaseSeparation() {
 // --- 8. Torchère de sécurité ---
 function Torchere() {
   const flameRef = useRef();
-
-  // Animation de la flamme
   useFrame(({ clock }) => {
     if (flameRef.current) {
       flameRef.current.scale.y = 1 + Math.sin(clock.getElapsedTime() * 2) * 0.1;
@@ -569,20 +746,16 @@ function Torchere() {
   });
 
   return (
-    <group position={[30, 0, 0]}>
-      {/* Structure de la torchère (plus grande) */}
+    <group position={[36, 0, 0]}>
+      <Fence position={[0, 0, -3]} length={8} />
       <mesh position={[0, 0, 0]} castShadow>
         <cylinderGeometry args={[0.8, 0.8, 8, 16]} />
-        <meshStandardMaterial color="#3A4A52" metalness={0.7} />
+        <meshStandardMaterial color="#3A4A52" metalness={0.9} />
       </mesh>
-
-      {/* Brûleur (partie supérieure) */}
       <mesh position={[0, 8, 0]} castShadow>
         <cylinderGeometry args={[1.2, 1, 1, 16]} />
-        <meshStandardMaterial color="#5A6A72" metalness={0.6} />
+        <meshStandardMaterial color="#5A6A72" metalness={0.8} />
       </mesh>
-
-      {/* Flamme (plus grande) */}
       <mesh ref={flameRef} position={[0, 9.5, 0]} castShadow>
         <coneGeometry args={[0.8, 2.5, 16]} />
         <meshStandardMaterial
@@ -591,16 +764,14 @@ function Torchere() {
           emissiveIntensity={1.5}
         />
       </mesh>
-
-      {/* Tuyau d'entrée (biogaz excédentaire) */}
-      <Pipe from={[-3, 3, 0]} to={[0, 3, 0]} color="#D8A93E" pulse />
-
+      <Smoke position={[0, 11, 0]} color="#666666" />
       <Label position={[0, 11, 0]} color="#FF5722">
         TORCHÈRE DE SÉCURITÉ
       </Label>
       <Label position={[0, 10.5, 0]} color="#FF5722" style={{ fontSize: "10px" }}>
         (Brûlage des excédents)
       </Label>
+      <Spotlight position={[-3, 5, 0]} color="#FFEB3B" intensity={1} />
     </group>
   );
 }
@@ -608,36 +779,102 @@ function Torchere() {
 // ============================================
 // SCÈNE PRINCIPALE
 // ============================================
-
-function Scene({ currentStage, setCurrentStage }) {
-  const { camera, gl } = useThree();
+function Scene({
+  currentStage,
+  setCurrentStage,
+  isTourActive,
+  tourWaypoints,
+  setTourProgress,
+  setCurrentWaypoint
+}) {
+  const { camera } = useThree();
   const controlsRef = useRef();
+  const targetPosition = useRef(new THREE.Vector3());
+  const targetLookAt = useRef(new THREE.Vector3());
+  const isMoving = useRef(false);
+  const tourStartTime = useRef(0);
+  const waypointDuration = 5;
 
-  // Déplacement de la caméra vers un poste
+  useFrame(() => {
+    if (isMoving.current && controlsRef.current && !isTourActive) {
+      const controls = controlsRef.current;
+      const currentPos = new THREE.Vector3();
+      const currentLook = new THREE.Vector3();
+      camera.getWorldPosition(currentPos);
+      controls.getTarget(currentLook);
+
+      currentPos.lerp(targetPosition.current, 0.1);
+      currentLook.lerp(targetLookAt.current, 0.1);
+
+      camera.position.copy(currentPos);
+      controls.target.copy(currentLook);
+      controls.update();
+
+      if (currentPos.distanceTo(targetPosition.current) < 0.1) {
+        isMoving.current = false;
+      }
+    }
+
+    if (isTourActive && controlsRef.current) {
+      const now = Date.now() / 1000;
+      if (tourStartTime.current === 0) {
+        tourStartTime.current = now;
+      }
+
+      const elapsed = now - tourStartTime.current;
+      const totalDuration = tourWaypoints.length * waypointDuration;
+      const progress = Math.min(elapsed / totalDuration, 1);
+      setTourProgress(progress);
+
+      const currentWaypointIndex = Math.min(
+        Math.floor(elapsed / waypointDuration),
+        tourWaypoints.length - 1
+      );
+      setCurrentWaypoint(currentWaypointIndex);
+
+      const startWaypoint = tourWaypoints[currentWaypointIndex];
+      const endWaypoint = tourWaypoints[Math.min(currentWaypointIndex + 1, tourWaypoints.length - 1)];
+
+      const localProgress = (elapsed % waypointDuration) / waypointDuration;
+      const currentPos = new THREE.Vector3().lerpVectors(
+        new THREE.Vector3(...startWaypoint.cameraPos),
+        new THREE.Vector3(...endWaypoint.cameraPos),
+        localProgress
+      );
+      const currentLook = new THREE.Vector3().lerpVectors(
+        new THREE.Vector3(...startWaypoint.target),
+        new THREE.Vector3(...endWaypoint.target),
+        localProgress
+      );
+
+      camera.position.copy(currentPos);
+      controlsRef.current.target.copy(currentLook);
+      controlsRef.current.update();
+
+      if (startWaypoint.stage) {
+        setCurrentStage(startWaypoint.stage);
+      }
+    }
+  });
+
   const moveToPost = (position) => {
     if (controlsRef.current) {
-      controlsRef.current.setLookAt(
-        position.x,
-        position.y + 2,
-        position.z + 5,
-        position.x,
-        position.y + 1,
-        position.z,
-        true
-      );
+      targetPosition.current.set(position.x, position.y + 3, position.z + 8);
+      targetLookAt.current.set(position.x, position.y + 1, position.z);
+      isMoving.current = true;
     }
   };
 
-  // Gestion du clic sur les postes
-  const handlePostClick = (stageId) => {
-    setCurrentStage(stageId);
-    const stage = STAGES.find(s => s.id === stageId);
-    if (stage) moveToPost(stage.position);
+  const handleStageClick = (stageId) => {
+    if (!isTourActive) {
+      setCurrentStage(stageId);
+      const stage = STAGES.find(s => s.id === stageId);
+      if (stage) moveToPost(stage.position);
+    }
   };
 
   return (
     <>
-      {/* Éclairage extérieur réaliste */}
       <Sky
         distance={450000}
         sunPosition={[10, 20, 10]}
@@ -648,11 +885,7 @@ function Scene({ currentStage, setCurrentStage }) {
         mieCoefficient={0.005}
         mieDirectionalG={0.8}
       />
-
-      {/* Lumière ambiante */}
       <ambientLight intensity={0.6} />
-
-      {/* Lumière directionnelle (soleil) */}
       <directionalLight
         position={[10, 20, 10]}
         intensity={1.5}
@@ -666,47 +899,44 @@ function Scene({ currentStage, setCurrentStage }) {
         shadow-camera-top={50}
         shadow-camera-bottom={-50}
       />
-
-      {/* Lumière ponctuelle pour les détails */}
       <pointLight position={[0, 10, 0]} intensity={0.5} color="#65C99A" />
-
-      {/* Sol en béton */}
       <ConcreteGround />
-
-      {/* Postes de l'installation */}
+      <Grass />
+      <Tree position={[-25, 0, -10]} />
+      <Tree position={[-25, 0, -20]} />
+      <Tree position={[-25, 0, -30]} />
+      <Tree position={[40, 0, -10]} />
+      <Tree position={[40, 0, -20]} />
+      <Tree position={[40, 0, -30]} />
       <WastePile />
       <SortingStation />
       <Mixer />
-
-      {/* Méthaniseur (affichage normal ou en coupe) */}
       {currentStage === "hydrolyse" || currentStage === "acidogenese" || currentStage === "acetogenese" || currentStage === "methanogenese" ? (
         <DigesterCutView stage={currentStage} />
       ) : (
-        <Digester onClick={() => handlePostClick("methaniseur")} />
+        <Digester onClick={() => !isTourActive && handleStageClick("methaniseur")} />
       )}
-
       <GasTreatment />
       <Cogeneration />
       <PhaseSeparation />
       <Torchere />
-
-      {/* Connexions entre les postes */}
-      <Pipe from={[-9, 0.75, 0]} to={[-3.5, 1.5, 0]} color="#B88955" pulse />
-      <Pipe from={[-3.5, 1.5, 0]} to={[0, 2.5, 0]} color="#C99A61" pulse />
-      <Pipe from={[2.5, 0.5, 0]} to={[3.5, 2.5, 0]} color="#68B58C" pulse />
-      <Pipe from={[8.5, 4.5, 0]} to={[10, 2.5, 0]} color="#D8A93E" pulse />
-      <Pipe from={[14.5, 2.5, 0]} to={[16, 2.5, 0]} color="#D8A93E" pulse />
-      <Pipe from={[20.5, 1.5, 0]} to={[22, 1.5, 0]} color="#68B58C" pulse />
-
-      {/* Contrôles de caméra */}
+      <Fence position={[-20, 0, 5]} length={10} />
+      <Fence position={[36, 0, 5]} length={10} />
+      <Pipe from={[-17, 0.75, 0]} to={[-14, 1.5, 0]} color="#B88955" pulse />
+      <Pipe from={[-10, 1.5, 0]} to={[-6, 2.5, 0]} color="#C99A61" pulse />
+      <Pipe from={[-2, 0.5, 0]} to={[2, 2.5, 0]} color="#68B58C" pulse />
+      <Pipe from={[6, 4.5, 0]} to={[10, 2.5, 0]} color="#D8A93E" pulse />
+      <Pipe from={[14, 2.5, 0]} to={[18, 2.5, 0]} color="#D8A93E" pulse />
+      <Pipe from={[22, 1.5, 0]} to={[26, 1.5, 0]} color="#68B58C" pulse />
       <OrbitControls
         ref={controlsRef}
         rotateSpeed={1.5}
         zoomSpeed={1.2}
         panSpeed={0.8}
         minDistance={5}
-        maxDistance={50}
-        enablePan={true}
+        maxDistance={100}
+        enablePan={!isTourActive}
+        enableRotate={!isTourActive}
         enableDamping
         dampingFactor={0.05}
       />
@@ -717,61 +947,205 @@ function Scene({ currentStage, setCurrentStage }) {
 // ============================================
 // APPLICATION PRINCIPALE
 // ============================================
-
 function App() {
   const [currentStage, setCurrentStage] = useState("collecte");
+  const [isTourActive, setIsTourActive] = useState(false);
+  const [currentWaypoint, setCurrentWaypoint] = useState(0);
+  const [tourProgress, setTourProgress] = useState(0);
 
-  // Trouver l'index de l'étape actuelle
+  const tourWaypoints = [
+    {
+      cameraPos: [-5, 10, 50],
+      target: [0, 0, 0],
+      text: "Bienvenue dans cette visite guidée d'une installation de méthanisation. Nous allons explorer chaque étape du processus.",
+      stage: null,
+    },
+    {
+      cameraPos: [-25, 8, 0],
+      target: [-20, 0, 0],
+      text: "Ici, les déchets organiques (fumier, déchets alimentaires, résidus agricoles) sont collectés avant d'entrer dans le processus.",
+      stage: "collecte",
+    },
+    {
+      cameraPos: [-17, 8, 0],
+      target: [-12, 0, 0],
+      text: "Dans cette station, les éléments indésirables (pierres, sable, produits chimiques) sont retirés pour éviter de perturber le processus.",
+      stage: "tri",
+    },
+    {
+      cameraPos: [-9, 8, 0],
+      target: [-4, 0, 0],
+      text: "Le substrat est broyé, mélangé et homogénéisé pour faciliter la digestion dans le méthaniseur.",
+      stage: "pretraitement",
+    },
+    {
+      cameraPos: [0, 10, 8],
+      target: [4, 0, 0],
+      text: "C'est le cœur du système ! Les micro-organismes décomposent la matière organique en absence d'oxygène, produisant du biogaz.",
+      stage: "methaniseur",
+    },
+    {
+      cameraPos: [8, 10, 8],
+      target: [12, 0, 0],
+      text: "Le biogaz est épuré (H₂S, CO₂, humidité) puis stocké sous un dôme EPDM à faible pression.",
+      stage: "traitement_biogaz",
+    },
+    {
+      cameraPos: [16, 10, 8],
+      target: [20, 0, 0],
+      text: "Le biogaz alimente un moteur de cogénération, produisant 35% d'électricité et 65% de chaleur.",
+      stage: "cogeneration",
+    },
+    {
+      cameraPos: [24, 10, 8],
+      target: [28, 0, 0],
+      text: "Le digestat est séparé en phase solide (dalle béton) et phase liquide (cuve de stockage) pour épandage agronomique.",
+      stage: "separation_phases",
+    },
+    {
+      cameraPos: [32, 10, 8],
+      target: [36, 0, 0],
+      text: "La torchère brûle l'excédent de biogaz en cas de surproduction ou de maintenance, pour des raisons de sécurité.",
+      stage: "torchere",
+    },
+    {
+      cameraPos: [0, 15, 50],
+      target: [0, 0, 0],
+      text: "Merci d'avoir visité cette installation de méthanisation ! Vous savez maintenant comment les déchets organiques sont transformés en énergie renouvelable.",
+      stage: null,
+    },
+  ];
+
   const currentIndex = STAGES.findIndex(s => s.id === currentStage);
 
-  // Changer d'étape
   const changeStage = (index) => {
-    const newStage = STAGES[Math.max(0, Math.min(STAGES.length - 1, index))].id;
-    setCurrentStage(newStage);
+    if (!isTourActive) {
+      const newStage = STAGES[Math.max(0, Math.min(STAGES.length - 1, index))].id;
+      setCurrentStage(newStage);
+    }
+  };
+
+  const startTour = () => {
+    setIsTourActive(true);
+    setCurrentWaypoint(0);
+    setTourProgress(0);
+  };
+
+  const pauseTour = () => {
+    setIsTourActive(false);
+  };
+
+  const resumeTour = () => {
+    setIsTourActive(true);
+  };
+
+  const stopTour = () => {
+    setIsTourActive(false);
+    setCurrentWaypoint(0);
+    setTourProgress(0);
   };
 
   return (
     <div className="app">
       <header>
         <div>
-          <div className="eyebrow">BIOFLOW 3D · SIMULATION RÉALISTE</div>
+          <div className="eyebrow">BIOFLOW 3D · VISITE GUIDÉE</div>
           <h1>Visite virtuelle d'une installation de méthanisation</h1>
-          <p>Explorez chaque poste en cliquant sur les étapes ou en naviguant dans la scène 3D.</p>
+          <p>
+            {isTourActive
+              ? tourWaypoints[currentWaypoint]?.text
+              : "Explorez chaque poste en cliquant sur les étapes ou lancez la visite guidée."}
+          </p>
         </div>
         <div className="controls">
-          <button onClick={() => changeStage(currentIndex - 1)} disabled={currentIndex === 0}>
-            ← Précédent
-          </button>
-          <button onClick={() => changeStage(currentIndex + 1)} disabled={currentIndex === STAGES.length - 1}>
-            Suivant →
-          </button>
-          <button onClick={() => changeStage(0)}>Réinitialiser</button>
+          {!isTourActive ? (
+            <>
+              <button onClick={() => changeStage(currentIndex - 1)} disabled={currentIndex === 0}>
+                ← Précédent
+              </button>
+              <button onClick={() => changeStage(currentIndex + 1)} disabled={currentIndex === STAGES.length - 1}>
+                Suivant →
+              </button>
+              <button onClick={() => changeStage(0)}>Réinitialiser</button>
+              <button onClick={startTour} className="tour-button">
+                🚀 Démarrer la visite
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={pauseTour} className="tour-button">
+                ⏸ Pause
+              </button>
+              <button onClick={resumeTour} className="tour-button">
+                ▶ Reprise
+              </button>
+              <button onClick={stopTour} className="tour-button">
+                ⏹ Arrêter
+              </button>
+            </>
+          )}
         </div>
       </header>
 
       <main>
         <section className="viewport">
           <Canvas
-            camera={{ position: [-5, 10, 25], fov: 50 }}
+            camera={{ position: [-5, 10, 50], fov: 50 }}
             shadows
           >
             <color attach="background" args={["#87CEEB"]} />
-            <Scene currentStage={currentStage} setCurrentStage={setCurrentStage} />
+            <Scene
+              currentStage={currentStage}
+              setCurrentStage={setCurrentStage}
+              isTourActive={isTourActive}
+              tourWaypoints={tourWaypoints}
+              setTourProgress={setTourProgress}
+              setCurrentWaypoint={setCurrentWaypoint}
+            />
           </Canvas>
           <div className="hint">
-            Glisser = rotation · Molette = zoom · Clic droit = déplacement · Clic sur une étape = centrer la caméra
+            {isTourActive
+              ? `Visite en cours : ${Math.round(tourProgress * 100)}%`
+              : "Glisser = rotation · Molette = zoom · Clic droit = déplacement · Clic sur une étape = centrer la caméra"}
           </div>
+          {isTourActive && (
+            <div className="tour-progress">
+              <div
+                className="tour-progress-bar"
+                style={{ width: `${tourProgress * 100}%` }}
+              />
+            </div>
+          )}
         </section>
 
         <aside>
           <div className="panel">
-            <div className="panel-title">ÉTAPE ACTUELLE</div>
-            <div className="stage-number">{String(currentIndex + 1).padStart(2, "0")}</div>
-            <h2>{STAGES.find(s => s.id === currentStage)?.title}</h2>
-            <p>{STAGES.find(s => s.id === currentStage)?.text}</p>
-            <div className="progress">
-              <span style={{ width: `${((currentIndex + 1) / STAGES.length) * 100}%` }} />
+            <div className="panel-title">
+              {isTourActive ? "VISITE GUIDÉE" : "ÉTAPE ACTUELLE"}
             </div>
+            {isTourActive ? (
+              <div className="tour-info">
+                <p>
+                  <strong>Étape {currentWaypoint + 1}/{tourWaypoints.length}</strong>
+                </p>
+                <p>{tourWaypoints[currentWaypoint]?.text}</p>
+              </div>
+            ) : (
+              <>
+                <div className="stage-number">
+                  {String(currentIndex + 1).padStart(2, "0")}
+                </div>
+                <h2>{STAGES.find(s => s.id === currentStage)?.title}</h2>
+                <p>{STAGES.find(s => s.id === currentStage)?.text}</p>
+                <div className="progress">
+                  <span
+                    style={{
+                      width: `${((currentIndex + 1) / STAGES.length) * 100}%`,
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="panel">
@@ -780,7 +1154,8 @@ function App() {
               <button
                 key={s.id}
                 className={"stage-row " + (i === currentIndex ? "selected" : "")}
-                onClick={() => setCurrentStage(s.id)}
+                onClick={() => !isTourActive && setCurrentStage(s.id)}
+                disabled={isTourActive}
               >
                 <span className="dot" style={{ background: s.color }} />
                 <span>{s.label}</span>
