@@ -101,17 +101,40 @@ function FlowParticle({ from, to, color }) {
   );
 }
 
-// --- Sol en béton texturé ---
+// --- Sol multi-zones ---
 function ConcreteGround() {
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
-      <planeGeometry args={[100, 100]} />
-      <meshStandardMaterial
-        color="#5A6A72"
-        roughness={0.9}
-        metalness={0.1}
-      />
-    </mesh>
+    <group>
+      {/* Main concrete pad under equipment */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]} receiveShadow>
+        <planeGeometry args={[70, 20]} />
+        <meshStandardMaterial color="#9AA0A4" roughness={0.9} metalness={0.1} />
+      </mesh>
+      {/* Gravel access roads */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 12]} receiveShadow>
+        <planeGeometry args={[70, 6]} />
+        <meshStandardMaterial color="#8A8A7A" roughness={0.95} metalness={0.05} />
+      </mesh>
+      {/* Gravel road — front */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, -8]} receiveShadow>
+        <planeGeometry args={[70, 6]} />
+        <meshStandardMaterial color="#8A8A7A" roughness={0.95} metalness={0.05} />
+      </mesh>
+      {/* Gravel turning area in front of sorting */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-12, -0.07, 7]} receiveShadow>
+        <circleGeometry args={[5, 32]} />
+        <meshStandardMaterial color="#7A7A6A" roughness={0.95} metalness={0.05} />
+      </mesh>
+      {/* Dark earth around perimeter */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, -20]} receiveShadow>
+        <planeGeometry args={[100, 30]} />
+        <meshStandardMaterial color="#6B5B4A" roughness={1} metalness={0} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, 30]} receiveShadow>
+        <planeGeometry args={[100, 30]} />
+        <meshStandardMaterial color="#6B5B4A" roughness={1} metalness={0} />
+      </mesh>
+    </group>
   );
 }
 
@@ -376,45 +399,94 @@ function WastePile({ onClick }) {
   );
 }
 
-// --- 2. Station de tri ---
+// --- 2. Station de tri (hangar industriel réaliste) ---
 function SortingStation({ onClick }) {
   return (
     <group position={[-12, 0, 0]} onClick={onClick}>
-      <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
-        <boxGeometry args={[4, 3, 3]} />
-        <meshStandardMaterial color="#8B4513" />
+      {/* Main building — metal-clad industrial hall */}
+      <mesh position={[0, 2.25, 0]} castShadow receiveShadow>
+        <boxGeometry args={[6, 4.5, 5]} />
+        <meshStandardMaterial color="#7A8A92" metalness={0.4} roughness={0.6} />
       </mesh>
-      <mesh position={[0, 3, 0]} castShadow>
-        <boxGeometry args={[4.2, 0.2, 3.2]} />
-        <meshStandardMaterial color="#5A6A72" metalness={0.6} />
+      {/* Corrugated metal walls (vertical stripes) */}
+      {Array.from({ length: 10 }, (_, i) => (
+        <mesh key={`wall-${i}`} position={[-3 + i * 0.6, 2.25, 2.51]} castShadow>
+          <boxGeometry args={[0.05, 4.5, 0.1]} />
+          <meshStandardMaterial color="#8A9AA2" metalness={0.5} roughness={0.5} />
+        </mesh>
+      ))}
+      {/* Peaked roof — two angled panels */}
+      <mesh position={[0, 4.6, 0]} rotation={[0.3, 0, 0]} castShadow>
+        <boxGeometry args={[6.2, 0.12, 3]} />
+        <meshStandardMaterial color="#5A6A72" metalness={0.5} roughness={0.5} />
       </mesh>
-      <mesh position={[0, 1.5, 1.6]} rotation={[0, 0, Math.PI / 4]} castShadow>
-        <boxGeometry args={[4.5, 0.1, 0.8]} />
-        <meshStandardMaterial color="#4A5A62" metalness={0.8} />
+      <mesh position={[0, 4.6, 0]} rotation={[-0.3, 0, 0]} castShadow>
+        <boxGeometry args={[6.2, 0.12, 3]} />
+        <meshStandardMaterial color="#5A6A72" metalness={0.5} roughness={0.5} />
       </mesh>
-      <group position={[0, 1.6, 1.6]}>
-        {Array.from({ length: 8 }, (_, i) => (
-          <mesh
-            key={i}
-            position={[(i - 4) * 0.5, 0.1, 0]}
-            scale={[0.3, 0.15, 0.3]}
-            castShadow
-          >
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial
-              color={i % 3 === 0 ? "#66747A" : "#765B3D"}
-              metalness={0.3}
-            />
+      {/* Ridge beam */}
+      <mesh position={[0, 4.8, 0]} castShadow>
+        <boxGeometry args={[6.3, 0.15, 0.2]} />
+        <meshStandardMaterial color="#4A5A62" metalness={0.6} />
+      </mesh>
+      {/* Garage door */}
+      <mesh position={[0, 1.3, 2.52]} castShadow>
+        <boxGeometry args={[2.5, 2.6, 0.1]} />
+        <meshStandardMaterial color="#6A7A82" metalness={0.3} roughness={0.5} />
+      </mesh>
+      {/* Door panels */}
+      {[0, 0.65, 1.3].map((y, i) => (
+        <mesh key={`panel-${i}`} position={[0, 0.65 + y, 2.57]} castShadow>
+          <boxGeometry args={[2.4, 0.03, 0.02]} />
+          <meshStandardMaterial color="#5A6A72" metalness={0.4} />
+        </mesh>
+      ))}
+      {/* Conveyor belt exiting building — inclined */}
+      <group position={[4.5, 1.5, 0]} rotation={[0, 0, 0.4]}>
+        {/* Belt frame */}
+        <mesh castShadow>
+          <boxGeometry args={[4, 0.6, 0.8]} />
+          <meshStandardMaterial color="#4A4A4A" metalness={0.7} roughness={0.4} />
+        </mesh>
+        {/* Belt surface */}
+        <mesh position={[0, 0.31, 0]} castShadow>
+          <boxGeometry args={[3.8, 0.05, 0.6]} />
+          <meshStandardMaterial color="#2A2A2A" roughness={0.8} />
+        </mesh>
+        {/* Rollers */}
+        {[-1.2, 0, 1.2].map((x, i) => (
+          <mesh key={`roller-${i}`} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.12, 0.12, 0.8, 12]} />
+            <meshStandardMaterial color="#5A5A5A" metalness={0.8} />
           </mesh>
         ))}
       </group>
-      <Label position={[0, 4, 0]} color="#B88955">
+      {/* Conveyor motor */}
+      <mesh position={[3.5, 3.2, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.4, 0.5]} />
+        <meshStandardMaterial color="#2E5090" metalness={0.6} roughness={0.4} />
+      </mesh>
+      {/* Concrete apron in front */}
+      <mesh position={[0, 0.02, 4]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[6, 3]} />
+        <meshStandardMaterial color="#9AA0A4" roughness={0.9} metalness={0.1} />
+      </mesh>
+      {/* Waste bins next to building */}
+      <mesh position={[-3.5, 0.5, 1]} castShadow>
+        <boxGeometry args={[1.2, 1, 1]} />
+        <meshStandardMaterial color="#4A7C59" metalness={0.3} roughness={0.7} />
+      </mesh>
+      <mesh position={[-3.5, 0.5, -0.5]} castShadow>
+        <boxGeometry args={[1.2, 1, 1]} />
+        <meshStandardMaterial color="#8B4513" metalness={0.3} roughness={0.7} />
+      </mesh>
+      <Label position={[0, 5.5, 0]} color="#B88955">
         RÉCEPTION / TRI
       </Label>
-      <Label position={[0, 3.5, 0]} color="#B88955" style={{ fontSize: "10px" }}>
-        (Séparation des indésirables)
+      <Label position={[0, 5, 0]} color="#B88955" style={{ fontSize: "10px" }}>
+        (Hangar industriel — séparation des indésirables)
       </Label>
-      <Worker position={[1, 0, -1]} />
+      <Worker position={[2, 0, -1.5]} />
     </group>
   );
 }
@@ -712,6 +784,18 @@ function DigesterCutView({ stage }) {
       </group>
       <ArrowFlow color={cfg?.color || "#65C99A"} />
       {isMeth && <GasCloud />}
+      {/* Heating coils — stainless steel spirals near bottom */}
+      {[1.5, 2.5, 3.5].map((y, i) => (
+        <mesh key={`coil-${i}`} position={[0, y, 0]} rotation={[Math.PI / 2, 0, i * 0.5]}>
+          <torusGeometry args={[2.5 - i * 0.3, 0.08, 8, 32, Math.PI * 1.5]} />
+          <meshStandardMaterial color="#C0C0C0" metalness={0.8} roughness={0.2} />
+        </mesh>
+      ))}
+      {/* Coil inlet pipe */}
+      <mesh position={[0, 1.5, 3.2]} castShadow>
+        <cylinderGeometry args={[0.08, 0.08, 0.5, 12]} />
+        <meshStandardMaterial color="#D84315" metalness={0.7} />
+      </mesh>
       <Label position={[0, 6, 0]} color={cfg?.color || "#65C99A"}>
         {STAGES.find(s => s.id === stage)?.title.toUpperCase()}
       </Label>
@@ -881,33 +965,90 @@ function Cogeneration({ onClick }) {
   );
 }
 
-// --- 7. Séparation de phases ---
+// --- 7. Séparation de phases (séparateur à vis réaliste) ---
 function PhaseSeparation({ onClick }) {
   return (
     <group position={[28, 0, 0]} onClick={onClick}>
+      {/* Concrete base pad */}
       <mesh position={[0, 0.1, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[4, 4]} />
-        <meshStandardMaterial color="#5A6A72" roughness={0.9} metalness={0.1} />
+        <planeGeometry args={[5, 5]} />
+        <meshStandardMaterial color="#9AA0A4" roughness={0.9} metalness={0.1} />
       </mesh>
-      <mesh position={[-1.5, 0.5, 0]} castShadow>
-        <boxGeometry args={[2, 0.5, 2]} />
-        <meshStandardMaterial color="#4F6845" roughness={0.8} />
+      {/* Elevated support frame — steel structure */}
+      <mesh position={[0, 0.8, 0]} castShadow>
+        <boxGeometry args={[3.5, 0.15, 1.2]} />
+        <meshStandardMaterial color="#3A7D44" metalness={0.6} roughness={0.4} />
       </mesh>
-      <mesh position={[1.5, 1.5, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[1.5, 1.5, 3, 32]} />
-        <meshStandardMaterial color="#34464C" metalness={0.6} />
+      {/* Support legs */}
+      {[-1.5, 0, 1.5].map((x, i) => (
+        <React.Fragment key={`leg-${i}`}>
+          <mesh position={[x, 0.4, 0.5]} castShadow>
+            <boxGeometry args={[0.12, 0.8, 0.12]} />
+            <meshStandardMaterial color="#3A7D44" metalness={0.6} />
+          </mesh>
+          <mesh position={[x, 0.4, -0.5]} castShadow>
+            <boxGeometry args={[0.12, 0.8, 0.12]} />
+            <meshStandardMaterial color="#3A7D44" metalness={0.6} />
+          </mesh>
+        </React.Fragment>
+      ))}
+      {/* Screw press body — horizontal stainless steel cylinder */}
+      <mesh position={[0, 1.8, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.45, 0.45, 3.6, 32]} />
+        <meshStandardMaterial color="#C0C0C0" metalness={0.7} roughness={0.3} />
       </mesh>
-      <mesh position={[0, 1.5, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[1, 1, 3, 32]} />
+      {/* Perforated screen section (middle of press) */}
+      <mesh position={[0.3, 1.8, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.48, 0.48, 1.5, 32]} />
+        <meshStandardMaterial color="#A0A0A0" metalness={0.6} roughness={0.4} wireframe />
+      </mesh>
+      {/* Drive motor — blue */}
+      <mesh position={[-2.2, 1.8, 0]} castShadow>
+        <boxGeometry args={[0.6, 0.5, 0.5]} />
+        <meshStandardMaterial color="#2E5090" metalness={0.6} roughness={0.4} />
+      </mesh>
+      {/* Motor coupling */}
+      <mesh position={[-1.8, 1.8, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+        <meshStandardMaterial color="#5A5A5A" metalness={0.8} />
+      </mesh>
+      {/* Feed hopper on top */}
+      <mesh position={[1, 2.8, 0]} castShadow>
+        <boxGeometry args={[0.8, 0.6, 0.8]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.5} roughness={0.5} />
+      </mesh>
+      {/* Hopper funnel */}
+      <mesh position={[1, 2.4, 0]} castShadow>
+        <cylinderGeometry args={[0.15, 0.35, 0.4, 16]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.5} />
+      </mesh>
+      {/* Liquid discharge — bottom pipe */}
+      <mesh position={[-0.5, 1.2, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.1, 0.1, 1.5, 16]} />
         <meshStandardMaterial color="#4A5A62" metalness={0.7} />
       </mesh>
-      <Label position={[0, 3, 0]} color="#58C993">
+      {/* Solid discharge chute — right end */}
+      <mesh position={[2.2, 1.5, 0]} rotation={[0, 0, -0.3]} castShadow>
+        <boxGeometry args={[0.5, 0.8, 0.5]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.5} />
+      </mesh>
+      {/* Solid output pile */}
+      <mesh position={[2.8, 0.3, 0]} castShadow>
+        <coneGeometry args={[0.5, 0.6, 12]} />
+        <meshStandardMaterial color="#8B6B4A" roughness={0.9} />
+      </mesh>
+      {/* Liquid collection tank */}
+      <mesh position={[-2, 0.6, 2]} castShadow>
+        <cylinderGeometry args={[0.6, 0.6, 1.2, 24]} />
+        <meshStandardMaterial color="#34464C" metalness={0.5} roughness={0.5} />
+      </mesh>
+      <Label position={[0, 3.5, 0]} color="#58C993">
         SÉPARATION DE PHASES
       </Label>
-      <Label position={[0, 2.5, 0]} color="#58C993" style={{ fontSize: "10px" }}>
-        (Solide → dalle | Liquide → cuve)
+      <Label position={[0, 3, 0]} color="#58C993" style={{ fontSize: "10px" }}>
+        (Séparateur à vis — Solid/Liquide)
       </Label>
-      <Worker position={[1, 0, -1]} />
+      <Worker position={[2, 0, -1.5]} />
     </group>
   );
 }
@@ -979,6 +1120,20 @@ function Torchere({ onClick }) {
           </mesh>
         ))}
       </group>
+      {/* Ground safety markings — red circle + yellow square */}
+      <mesh position={[0, 0.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[2.5, 0.08, 8, 32]} />
+        <meshStandardMaterial color="#FF0000" emissive="#FF0000" emissiveIntensity={0.3} />
+      </mesh>
+      <mesh position={[0, 0.015, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <ringGeometry args={[3, 3.12, 4]} />
+        <meshStandardMaterial color="#FFC107" emissive="#FFC107" emissiveIntensity={0.2} />
+      </mesh>
+      <Html position={[0, 0.05, 3.5]} rotation={[-Math.PI / 2, 0, 0]} center style={{ pointerEvents: "none" }}>
+        <div style={{ color: "#FF0000", fontSize: "10px", fontWeight: "bold", fontFamily: "monospace", whiteSpace: "nowrap" }}>
+          ZONE SÉCURITÉ
+        </div>
+      </Html>
       <Label position={[0, 12, 0]} color="#FF5722">
         TORCHÈRE DE SÉCURITÉ
       </Label>
@@ -986,6 +1141,357 @@ function Torchere({ onClick }) {
         (Combustion interne — pas de flamme visible)
       </Label>
       <Spotlight position={[-3, 5, 0]} color="#FFEB3B" intensity={1} />
+    </group>
+  );
+}
+
+// --- 9. Bâtiment de contrôle (container prefab SCADA) ---
+function ControlBuilding({ onClick }) {
+  return (
+    <group position={[0, 0, 12]} onClick={onClick}>
+      {/* Concrete slab */}
+      <mesh position={[0, 0.05, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[8, 4]} />
+        <meshStandardMaterial color="#9AA0A4" roughness={0.9} metalness={0.1} />
+      </mesh>
+      {/* Container body — white prefab */}
+      <mesh position={[0, 1.5, 0]} castShadow receiveShadow>
+        <boxGeometry args={[6, 2.8, 2.4]} />
+        <meshStandardMaterial color="#E8E8E8" roughness={0.6} metalness={0.2} />
+      </mesh>
+      {/* Roof */}
+      <mesh position={[0, 3, 0]} castShadow>
+        <boxGeometry args={[6.1, 0.1, 2.5]} />
+        <meshStandardMaterial color="#D0D0D0" roughness={0.5} metalness={0.3} />
+      </mesh>
+      {/* Door */}
+      <mesh position={[2.5, 1, 1.21]} castShadow>
+        <boxGeometry args={[0.8, 1.8, 0.08]} />
+        <meshStandardMaterial color="#B0B0B0" metalness={0.4} />
+      </mesh>
+      {/* Door handle */}
+      <mesh position={[2.7, 1, 1.26]} castShadow>
+        <boxGeometry args={[0.05, 0.15, 0.05]} />
+        <meshStandardMaterial color="#888888" metalness={0.8} />
+      </mesh>
+      {/* Windows — 3 blue-tinted glass panels */}
+      {[-1.8, 0, 1.8].map((x, i) => (
+        <group key={`win-${i}`}>
+          <mesh position={[x, 1.8, 1.21]} castShadow>
+            <boxGeometry args={[1, 0.8, 0.08]} />
+            <meshStandardMaterial color="#4A6FA5" metalness={0.3} roughness={0.2} transparent opacity={0.7} />
+          </mesh>
+          {/* Window frame */}
+          <mesh position={[x, 1.8, 1.22]}>
+            <boxGeometry args={[1.05, 0.05, 0.02]} />
+            <meshStandardMaterial color="#A0A0A0" metalness={0.6} />
+          </mesh>
+          <mesh position={[x, 1.8, 1.22]}>
+            <boxGeometry args={[0.05, 0.85, 0.02]} />
+            <meshStandardMaterial color="#A0A0A0" metalness={0.6} />
+          </mesh>
+        </group>
+      ))}
+      {/* SCADA screens visible through windows (glowing rectangles) */}
+      {[-1.8, 0, 1.8].map((x, i) => (
+        <mesh key={`screen-${i}`} position={[x, 1.8, 1.15]}>
+          <boxGeometry args={[0.7, 0.5, 0.02]} />
+          <meshStandardMaterial color={i === 0 ? "#22C55E" : i === 1 ? "#3B82F6" : "#F59E0B"} emissive={i === 0 ? "#22C55E" : i === 1 ? "#3B82F6" : "#F59E0B"} emissiveIntensity={0.3} />
+        </mesh>
+      ))}
+      {/* Solar panel on roof (backup power) */}
+      <mesh position={[-1.5, 3.15, 0]} rotation={[0.3, 0, 0]} castShadow>
+        <boxGeometry args={[1.5, 0.05, 1]} />
+        <meshStandardMaterial color="#1A237E" metalness={0.8} roughness={0.2} />
+      </mesh>
+      {/* Panel frame */}
+      <mesh position={[-1.5, 3.13, 0]} rotation={[0.3, 0, 0]}>
+        <boxGeometry args={[1.55, 0.03, 1.05]} />
+        <meshStandardMaterial color="#A0A0A0" metalness={0.7} />
+      </mesh>
+      {/* Cable tray running to equipment */}
+      <mesh position={[0, 0.3, 3]} castShadow>
+        <boxGeometry args={[0.2, 0.15, 6]} />
+        <meshStandardMaterial color="#5A5A5A" metalness={0.5} />
+      </mesh>
+      <Label position={[0, 4.2, 0]} color="#3B82F6">
+        BÂTIMENT DE CONTRÔLE
+      </Label>
+      <Label position={[0, 3.8, 0]} color="#3B82F6" style={{ fontSize: "10px" }}>
+        (Supervision SCADA 24/7)
+      </Label>
+      <Worker position={[-2, 0, 2]} />
+    </group>
+  );
+}
+
+// --- Panneaux ATEX de sécurité ---
+function AtexSigns() {
+  const signs = [
+    { pos: [-18, 2.5, 5], color: "#FFC107", text: "ATEX ZONE" },
+    { pos: [-8, 2.5, 5], color: "#FF6B00", text: "GAZ INFLAMMABLE" },
+    { pos: [8, 2.5, 5], color: "#FF0000", text: "DÉFENSE DE FUMER" },
+    { pos: [18, 2.5, 5], color: "#FFC107", text: "ATEX ZONE" },
+    { pos: [30, 2.5, 5], color: "#FF6B00", text: "HAUTE TENSION" },
+  ];
+  return (
+    <group>
+      {signs.map((s, i) => (
+        <group key={i} position={s.pos}>
+          {/* Sign post */}
+          <mesh position={[0, -1, 0]} castShadow>
+            <boxGeometry args={[0.08, 2, 0.08]} />
+            <meshStandardMaterial color="#8A8A8A" metalness={0.7} />
+          </mesh>
+          {/* Sign board */}
+          <mesh castShadow>
+            <boxGeometry args={[1.2, 0.6, 0.05]} />
+            <meshStandardMaterial color={s.color} metalness={0.3} roughness={0.5} />
+          </mesh>
+          {/* Sign text */}
+          <Html position={[0, 0, 0.05]} center style={{ pointerEvents: "none" }}>
+            <div style={{ color: s.color === "#FFC107" || s.color === "#FF6B00" ? "#000" : "#FFF", fontSize: "11px", fontWeight: "bold", whiteSpace: "nowrap", fontFamily: "monospace" }}>
+              {s.text}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// --- Bacs de rétention béton ---
+function ContainmentBerm() {
+  return (
+    <group position={[0, 0, 0]}>
+      {/* Retention berm around digester — semi-circular wall */}
+      {Array.from({ length: 20 }, (_, i) => {
+        const angle = (i / 20) * Math.PI * 2;
+        return (
+          <mesh key={`berm-${i}`} position={[Math.sin(angle) * 5.5, 0.4, Math.cos(angle) * 5.5]} rotation={[0, -angle, 0]} castShadow>
+            <boxGeometry args={[1.8, 0.8, 0.25]} />
+            <meshStandardMaterial color="#9AA0A4" roughness={0.9} metalness={0.1} />
+          </mesh>
+        );
+      })}
+      {/* Inner floor (slightly depressed) */}
+      <mesh position={[0, 0.01, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
+        <circleGeometry args={[5.5, 48]} />
+        <meshStandardMaterial color="#8A9094" roughness={0.95} metalness={0.05} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 15. Instrumentation visible (jauges, vannes, capteurs) ---
+function Instrumentation() {
+  return (
+    <group>
+      {/* Manomètres sur pipes gaz */}
+      <group position={[8, 2.2, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.15, 12]} />
+          <meshStandardMaterial color="#C0C0C0" metalness={0.7} />
+        </mesh>
+        <mesh position={[0, 0, 0.12]}>
+          <cylinderGeometry args={[0.12, 0.12, 0.02, 16]} />
+          <meshStandardMaterial color="#F5F5F5" metalness={0.3} />
+        </mesh>
+        <mesh position={[0, 0, 0.14]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.01, 16]} />
+          <meshStandardMaterial color="#FF0000" metalness={0.2} />
+        </mesh>
+      </group>
+      <group position={[16, 1.8, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.15, 12]} />
+          <meshStandardMaterial color="#C0C0C0" metalness={0.7} />
+        </mesh>
+        <mesh position={[0, 0, 0.12]}>
+          <cylinderGeometry args={[0.12, 0.12, 0.02, 16]} />
+          <meshStandardMaterial color="#F5F5F5" metalness={0.3} />
+        </mesh>
+        <mesh position={[0, 0, 0.14]}>
+          <cylinderGeometry args={[0.08, 0.08, 0.01, 16]} />
+          <meshStandardMaterial color="#FF0000" metalness={0.2} />
+        </mesh>
+      </group>
+      {/* Vannes à volant sur pipes substrate */}
+      <group position={[-8, 1.3, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.1, 0.1, 0.3, 12]} />
+          <meshStandardMaterial color="#5A5A5A" metalness={0.8} />
+        </mesh>
+        <mesh position={[0, 0.2, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.15, 0.15, 0.04, 16]} />
+          <meshStandardMaterial color="#5A5A5A" metalness={0.7} />
+        </mesh>
+        <mesh position={[0, 0.28, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <boxGeometry args={[0.04, 0.3, 0.04]} />
+          <meshStandardMaterial color="#5A5A5A" metalness={0.7} />
+        </mesh>
+      </group>
+      <group position={[-4, 1.8, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.1, 0.1, 0.3, 12]} />
+          <meshStandardMaterial color="#5A5A5A" metalness={0.8} />
+        </mesh>
+        <mesh position={[0, 0.2, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.15, 0.15, 0.04, 16]} />
+          <meshStandardMaterial color="#5A5A5A" metalness={0.7} />
+        </mesh>
+        <mesh position={[0, 0.28, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <boxGeometry args={[0.04, 0.3, 0.04]} />
+          <meshStandardMaterial color="#5A5A5A" metalness={0.7} />
+        </mesh>
+      </group>
+      {/* Capteur de T° sur pipe chaleur */}
+      <group position={[20, 1.8, 0]}>
+        <mesh>
+          <boxGeometry args={[0.12, 0.25, 0.12]} />
+          <meshStandardMaterial color="#D84315" metalness={0.4} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 0.16, 0]}>
+          <cylinderGeometry args={[0.03, 0.03, 0.12, 8]} />
+          <meshStandardMaterial color="#C0C0C0" metalness={0.8} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+// --- 16. Détecteurs gaz CH₄/H₂S ---
+function GasDetector({ position }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.4, 0]} castShadow>
+        <boxGeometry args={[0.3, 0.5, 0.15]} />
+        <meshStandardMaterial color="#FF6B00" metalness={0.3} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 0.55, 0.08]}>
+        <boxGeometry args={[0.2, 0.12, 0.02]} />
+        <meshStandardMaterial color="#22C55E" emissive="#22C55E" emissiveIntensity={0.8} />
+      </mesh>
+      <mesh position={[0, 0.75, 0]} castShadow>
+        <cylinderGeometry args={[0.02, 0.02, 0.3, 8]} />
+        <meshStandardMaterial color="#8A8A8A" metalness={0.8} />
+      </mesh>
+      <mesh position={[0, 0.92, 0]}>
+        <sphereGeometry args={[0.04, 8, 8]} />
+        <meshStandardMaterial color="#FF6B00" emissive="#FF6B00" emissiveIntensity={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 17. Sirène / gyrophare animé ---
+function Siren({ position = [0, 0, 0] }) {
+  const ref = useRef();
+  useFrame(({ clock }) => {
+    if (ref.current) {
+      const flash = Math.sin(clock.getElapsedTime() * 8) > 0 ? 2 : 0;
+      ref.current.material.emissiveIntensity = flash;
+    }
+  });
+  return (
+    <group position={position}>
+      <mesh position={[0, 3, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.1, 6, 12]} />
+        <meshStandardMaterial color="#7A7A7A" metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 6.2, 0]} castShadow>
+        <cylinderGeometry args={[0.25, 0.15, 0.4, 16]} />
+        <meshStandardMaterial color="#FF5722" metalness={0.4} roughness={0.5} />
+      </mesh>
+      <mesh ref={ref} position={[0, 6.5, 0]}>
+        <sphereGeometry args={[0.18, 12, 12]} />
+        <meshStandardMaterial color="#FF5722" emissive="#FF5722" emissiveIntensity={0} />
+      </mesh>
+      <mesh position={[0, 6.0, 0.2]} rotation={[Math.PI / 4, 0, 0]}>
+        <cylinderGeometry args={[0.15, 0.2, 0.2, 12]} />
+        <meshStandardMaterial color="#C0C0C0" metalness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 18. Panneaux de contrôle (armoirs électriques) ---
+function ControlPanel({ position }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.5, 0]} castShadow>
+        <boxGeometry args={[0.6, 1, 0.15]} />
+        <meshStandardMaterial color="#7A7A7A" metalness={0.4} roughness={0.5} />
+      </mesh>
+      <mesh position={[0, 0.5, 0.08]}>
+        <boxGeometry args={[0.5, 0.8, 0.01]} />
+        <meshStandardMaterial color="#6A6A6A" metalness={0.3} roughness={0.6} />
+      </mesh>
+      <mesh position={[-0.15, 0.7, 0.09]}>
+        <boxGeometry args={[0.06, 0.06, 0.01]} />
+        <meshStandardMaterial color="#22C55E" emissive="#22C55E" emissiveIntensity={0.6} />
+      </mesh>
+      <mesh position={[-0.15, 0.55, 0.09]}>
+        <boxGeometry args={[0.06, 0.06, 0.01]} />
+        <meshStandardMaterial color="#F59E0B" emissive="#F59E0B" emissiveIntensity={0.4} />
+      </mesh>
+      <mesh position={[-0.15, 0.4, 0.09]}>
+        <boxGeometry args={[0.06, 0.06, 0.01]} />
+        <meshStandardMaterial color="#EF4444" emissive="#EF4444" emissiveIntensity={0.3} />
+      </mesh>
+    </group>
+  );
+}
+
+// --- 19. Éclairage sécurité (lampadaires) ---
+function LightPole({ position = [0, 0, 0] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 4, 0]} castShadow>
+        <cylinderGeometry args={[0.08, 0.12, 8, 12]} />
+        <meshStandardMaterial color="#7A7A7A" metalness={0.7} />
+      </mesh>
+      <mesh position={[0, 8.1, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.04, 0.04, 1, 8]} />
+        <meshStandardMaterial color="#7A7A7A" metalness={0.7} />
+      </mesh>
+      <mesh position={[0.5, 8, 0]}>
+        <boxGeometry args={[0.8, 0.1, 0.3]} />
+        <meshStandardMaterial color="#F5F5DC" metalness={0.3} roughness={0.4} />
+      </mesh>
+      <pointLight position={[0.5, 7.5, 0]} intensity={0.4} color="#FFF8E1" distance={15} />
+    </group>
+  );
+}
+
+// --- 20. Pompe à digestat ---
+function DigestatePump({ position = [0, 0, 0] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.05, 0]} rotation={[Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[2.5, 2]} />
+        <meshStandardMaterial color="#8A9094" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.6, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.25, 0.25, 1.2, 20]} />
+        <meshStandardMaterial color="#B0B8BC" metalness={0.7} roughness={0.3} />
+      </mesh>
+      <mesh position={[-0.8, 0.6, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.45, 0.45]} />
+        <meshStandardMaterial color="#2E5090" metalness={0.6} roughness={0.4} />
+      </mesh>
+      <mesh position={[-0.5, 0.6, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.08, 0.08, 0.3, 12]} />
+        <meshStandardMaterial color="#5A5A5A" metalness={0.8} />
+      </mesh>
+      <mesh position={[-0.9, 0.6, 0.4]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.06, 0.06, 0.8, 12]} />
+        <meshStandardMaterial color="#4A4A4A" metalness={0.7} />
+      </mesh>
+      <mesh position={[0.9, 0.6, 0.4]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.06, 0.06, 0.8, 12]} />
+        <meshStandardMaterial color="#4A4A4A" metalness={0.7} />
+      </mesh>
     </group>
   );
 }
@@ -1133,6 +1639,25 @@ function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, set
     <Cogeneration onClick={() => !isTourActive && handleStageClick("cogeneration")} />
     <PhaseSeparation onClick={() => !isTourActive && handleStageClick("separation_phases")} />
     <Torchere onClick={() => !isTourActive && handleStageClick("torchere")} />
+    <ControlBuilding onClick={() => !isTourActive && handleStageClick("controle")} />
+    <AtexSigns />
+    <ContainmentBerm />
+    <Instrumentation />
+    <GasDetector position={[6, 0, 3]} />
+    <GasDetector position={[13, 0, 3]} />
+    <GasDetector position={[18, 0, 3]} />
+    <Siren position={[32, 0, -4]} />
+    <ControlPanel position={[-20, 0, -2.5]} />
+    <ControlPanel position={[-12, 0, -2.5]} />
+    <ControlPanel position={[4, 0, -2.5]} />
+    <ControlPanel position={[12, 0, -2.5]} />
+    <ControlPanel position={[20, 0, -2.5]} />
+    <ControlPanel position={[28, 0, -2.5]} />
+    <LightPole position={[-18, 0, 7]} />
+    <LightPole position={[-3, 0, 7]} />
+    <LightPole position={[12, 0, 7]} />
+    <LightPole position={[27, 0, 7]} />
+    <DigestatePump position={[16, 0, 2]} />
 
     {/* Clôtures */}
     <Fence position={[-20, 0, 5]} length={10} />
