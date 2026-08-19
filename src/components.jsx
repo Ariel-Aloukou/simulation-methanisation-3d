@@ -62,7 +62,7 @@ export function GlossaryPanel({ isOpen, onClose }) {
 }
 
 // --- Tuyau avec flux ---
-export function Pipe({ from, to, color = "#65C99A", pulse = false, width = 0.15 }) {
+export function Pipe({ from, to, color = "#65C99A", pulse = false, width = 0.15, xray }) {
   const a = new THREE.Vector3(...from);
   const b = new THREE.Vector3(...to);
   const mid = a.clone().add(b).multiplyScalar(0.5);
@@ -74,7 +74,9 @@ export function Pipe({ from, to, color = "#65C99A", pulse = false, width = 0.15 
     <group>
       <mesh position={mid} quaternion={q} castShadow receiveShadow>
         <cylinderGeometry args={[width, width, len, 16]} />
-        <meshStandardMaterial color={color} metalness={0.7} roughness={0.35} />
+        {xray
+          ? <meshPhysicalMaterial color={color} transparent opacity={0.2} roughness={0.4} metalness={0.3} side={THREE.DoubleSide} />
+          : <meshStandardMaterial color={color} metalness={0.7} roughness={0.35} />}
       </mesh>
       <mesh position={from} castShadow>
         <sphereGeometry args={[0.2, 8, 8]} />
@@ -84,26 +86,39 @@ export function Pipe({ from, to, color = "#65C99A", pulse = false, width = 0.15 
         <sphereGeometry args={[0.2, 8, 8]} />
         <meshStandardMaterial color={color} metalness={0.7} roughness={0.35} />
       </mesh>
-      {pulse && <FlowParticle from={from} to={to} color={color} />}
+      {pulse && <FlowParticle from={from} to={to} color={color} count={8} />}
     </group>
   );
 }
 
-// --- Particule de flux ---
-function FlowParticle({ from, to, color }) {
-  const ref = useRef();
+// --- Particules de flux (multi-particules) ---
+function FlowParticle({ from, to, color, count = 8 }) {
   const a = new THREE.Vector3(...from);
   const b = new THREE.Vector3(...to);
+  return (
+    <group>
+      {Array.from({ length: count }, (_, i) => (
+        <SingleParticle key={i} a={a} b={b} color={color} offset={i / count} />
+      ))}
+    </group>
+  );
+}
+
+function SingleParticle({ a, b, color, offset }) {
+  const ref = useRef();
   useFrame(({ clock }) => {
     if (ref.current) {
-      const t = (clock.getElapsedTime() * 0.32) % 1;
+      const t = (offset + clock.getElapsedTime() * 0.25) % 1;
       ref.current.position.lerpVectors(a, b, t);
+      const glow = 0.8 + Math.sin(clock.getElapsedTime() * 4 + offset * 10) * 0.4;
+      ref.current.material.emissiveIntensity = glow;
+      ref.current.scale.setScalar(0.7 + Math.sin(clock.getElapsedTime() * 3 + offset * 8) * 0.3);
     }
   });
   return (
-    <mesh ref={ref} castShadow>
-      <sphereGeometry args={[0.15, 12, 12]} />
-      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.2} />
+    <mesh ref={ref}>
+      <sphereGeometry args={[0.1, 10, 10]} />
+      <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.2} transparent opacity={0.9} />
     </mesh>
   );
 }

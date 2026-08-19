@@ -252,14 +252,14 @@ function Scene({ currentStage, setCurrentStage, isTourActive, tourWaypoints, set
     <Fence position={[-20, 0, 5]} length={10} />
     <Fence position={[36, 0, 5]} length={10} />
 
-    <Pipe from={[4, 4.5, 0]} to={[12, 2, 0]} color="#FFC107" pulse width={0.15} />
-    <Pipe from={[14, 2, 0]} to={[16, 1.5, 0]} color="#FFC107" pulse width={0.15} />
-    <Pipe from={[4, 4.5, 0]} to={[32, 1.5, 0]} color="#FFC107" pulse width={0.15} />
-    <Pipe from={[-17, 0.75, 0]} to={[-14, 1, 0]} color="#2A2A2A" pulse width={0.15} />
-    <Pipe from={[-10, 1, 0]} to={[-6, 1.5, 0]} color="#2A2A2A" pulse width={0.15} />
-    <Pipe from={[-2, 1.5, 0]} to={[0, 2, 0]} color="#2A2A2A" pulse width={0.15} />
-    <Pipe from={[24, 1.5, 0]} to={[8, 2, 0]} color="#D84315" width={0.15} />
-    <Pipe from={[8, 1, 0]} to={[24, 1.5, 0]} color="#4A4A4A" width={0.15} />
+    <Pipe from={[4, 4.5, 0]} to={[12, 2, 0]} color="#FFC107" pulse width={0.15} xray={xray} />
+    <Pipe from={[14, 2, 0]} to={[16, 1.5, 0]} color="#FFC107" pulse width={0.15} xray={xray} />
+    <Pipe from={[4, 4.5, 0]} to={[32, 1.5, 0]} color="#FFC107" pulse width={0.15} xray={xray} />
+    <Pipe from={[-17, 0.75, 0]} to={[-14, 1, 0]} color="#2A2A2A" pulse width={0.15} xray={xray} />
+    <Pipe from={[-10, 1, 0]} to={[-6, 1.5, 0]} color="#2A2A2A" pulse width={0.15} xray={xray} />
+    <Pipe from={[-2, 1.5, 0]} to={[0, 2, 0]} color="#2A2A2A" pulse width={0.15} xray={xray} />
+    <Pipe from={[24, 1.5, 0]} to={[8, 2, 0]} color="#D84315" pulse width={0.15} xray={xray} />
+    <Pipe from={[8, 1, 0]} to={[24, 1.5, 0]} color="#4A4A4A" pulse width={0.15} xray={xray} />
 
     <OrbitControls
       ref={controlsRef}
